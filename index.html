@@ -1,0 +1,729 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>کنترل مایعات - نسخه Supabase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Chart.js برای نمودار -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #1976d2;
+      color: #fff;
+      font-size: 14px;
+    }
+    button.secondary { background: #757575; }
+    button.danger { background: #d32f2f; }
+    button:disabled { opacity: 0.5; cursor: default; }
+
+    input[type="date"], select {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .summary-card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .table-wrapper {
+      flex: 1 1 60%;
+      min-width: 280px;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      max-height: 60vh;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      background: #eeeeee;
+      z-index: 1;
+    }
+    th, td {
+      border: 1px solid #e0e0e0;
+      padding: 4px 6px;
+      text-align: center;
+    }
+    th { font-weight: 600; }
+    tr:nth-child(even) td { background: #fafafa; }
+    tr.active-row td { background: #e0f7fa !important; }
+
+    .side-panel {
+      flex: 1 1 35%;
+      min-width: 220px;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      font-size: 13px;
+    }
+    .side-panel h3 { margin-top: 0; font-size: 16px; }
+    .side-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .side-buttons button {
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .chart-card {
+      margin-top: 16px;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .chart-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; }
+      .table-wrapper { max-height: 40vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>کنترل مایعات (نسخه Supabase)</h1>
+
+    <div class="top-bar">
+      <span>کد کاربر:</span>
+      <span id="userIdLabel" style="font-weight:bold;">...</span>
+      <button id="changeUserBtn" class="secondary">تغییر کد</button>
+    </div>
+
+    <div class="top-bar">
+      <button id="newRowBtn">شروع ردیف جدید</button>
+      <span>تاریخ گزارش روزانه:</span>
+      <input type="date" id="reportDate" />
+      <button id="refreshSummaryBtn" class="secondary">همگام‌سازی و به‌روزرسانی</button>
+    </div>
+
+    <div class="summary-card">
+      <pre id="summaryText">در حال بارگذاری...</pre>
+    </div>
+
+    <!-- نمودار ترند -->
+    <div class="chart-card">
+      <div class="chart-controls">
+        <span>بازه تاریخ نمودار:</span>
+        <label>از
+          <input type="date" id="chartFromDate" />
+        </label>
+        <label>تا
+          <input type="date" id="chartToDate" />
+        </label>
+        <span>ستون:</span>
+        <select id="chartMetric">
+          <option value="infusion_volume">تزریق (cc)</option>
+          <option value="oral_intake">نوشیدنی (cc)</option>
+          <option value="nephro_right">نفروستومی راست (cc)</option>
+          <option value="nephro_left">نفروستومی چپ (cc)</option>
+          <option value="ileostomy">ایلوستومی (cc)</option>
+          <option value="colostomy">کلستومی (cc)</option>
+          <option value="vomiting">استفراغ (cc)</option>
+        </select>
+        <button id="drawChartBtn">رسم نمودار</button>
+      </div>
+      <canvas id="trendChart" height="120"></canvas>
+    </div>
+
+    <div class="layout">
+      <div class="table-wrapper">
+        <table id="entriesTable">
+          <thead>
+            <tr>
+              <th>تاریخ</th>
+              <th>ساعت</th>
+              <th>تزریق (cc)</th>
+              <th>نوع تزریق</th>
+              <th>نوشیدنی (cc)</th>
+              <th>نفرو راست (cc)</th>
+              <th>نفرو چپ (cc)</th>
+              <th>ایلوستومی (cc)</th>
+              <th>کلستومی (cc)</th>
+              <th>استفراغ (cc)</th>
+              <th>توضیحات</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <aside class="side-panel">
+        <h3>ورود / ویرایش ردیف</h3>
+        <p id="currentRowLabel">هیچ ردیف فعالی انتخاب نشده است.</p>
+        <p style="font-size:12px;">
+          ➤ روی <b>«شروع ردیف جدید»</b> بزن، بعد از دکمه‌های زیر برای پر کردن ستون‌های دلخواه استفاده کن.  
+          برای ویرایش ردیف‌های قبلی، روی سلول جدول کلیک کن.
+        </p>
+        <div class="side-buttons">
+          <button data-field="date" class="secondary">تغییر تاریخ</button>
+          <button data-field="time" class="secondary">تغییر ساعت</button>
+          <button data-field="infusion_volume">مقدار تزریق (cc)</button>
+          <button data-field="infusion_type">نوع تزریق</button>
+          <button data-field="oral_intake">نوشیدنی (cc)</button>
+          <button data-field="nephro_right">نفروستومی راست (cc)</button>
+          <button data-field="nephro_left">نفروستومی چپ (cc)</button>
+          <button data-field="ileostomy">ایلوستومی (cc)</button>
+          <button data-field="colostomy">کلستومی (cc)</button>
+          <button data-field="vomiting">استفراغ (cc)</button>
+          <button data-field="notes" class="secondary">توضیحات</button>
+          <button id="finishRowBtn" class="danger">پایان ردیف فعال</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // === ۱. تنظیم اتصال به Supabase ===
+    const supabaseUrl = "https://mmlvqmptvjeldxvkycrx.supabase.co"; // مثل: https://xxxx.supabase.co
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbHZxbXB0dmplbGR4dmt5Y3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTUwODUsImV4cCI6MjA3OTMzMTA4NX0.bU65ru6zNAryNQQgkxCAU2mA-zQiwZCuCkOIZek4HJo"; // anon public
+    const supa = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    const STORAGE_USER_KEY = 'fluid_supabase_user_code_v1';
+    let currentUserCode = null;
+    let entries = [];
+    let currentEditingId = null;
+    let trendChartInstance = null;
+
+    const metricLabels = {
+      infusion_volume: 'تزریق (cc)',
+      oral_intake: 'نوشیدنی (cc)',
+      nephro_right: 'نفروستومی راست (cc)',
+      nephro_left: 'نفروستومی چپ (cc)',
+      ileostomy: 'ایلوستومی (cc)',
+      colostomy: 'کلستومی (cc)',
+      vomiting: 'استفراغ (cc)'
+    };
+
+    function formatDateInput(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatTime(d) {
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+
+    function deriveTimestamp(dateStr, timeStr) {
+      if (!dateStr) return null;
+      const [y, m, d] = dateStr.split('-').map(Number);
+      if (!y || !m || !d) return null;
+      let hh = 0, mm = 0;
+      if (timeStr && timeStr.includes(':')) {
+        [hh, mm] = timeStr.split(':').map(Number);
+      }
+      const dt = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+      return dt.getTime();
+    }
+
+    // --- مدیریت کد کاربر ---
+    function askUserCode() {
+      let code = null;
+      while (!code) {
+        const input = prompt("یک کد اختصاصی برای خودتان وارد کنید (مثلاً: mahdi-fluid-1404). این کد را روی تمام دستگاه‌ها یکسان وارد کنید:", "");
+        if (input === null) {
+          alert("بدون کد کاربر، برنامه نمی‌تواند به دیتابیس مشترک وصل شود.");
+          continue;
+        }
+        const trimmed = input.trim();
+        if (!trimmed) {
+          alert("کد نباید خالی باشد.");
+          continue;
+        }
+        code = trimmed;
+      }
+      return code;
+    }
+
+    function setUserCode(code) {
+      currentUserCode = code;
+      localStorage.setItem(STORAGE_USER_KEY, code);
+      document.getElementById('userIdLabel').textContent = code;
+    }
+
+    function getOrInitUserCode() {
+      let code = localStorage.getItem(STORAGE_USER_KEY);
+      if (!code) code = askUserCode();
+      setUserCode(code);
+    }
+
+    // --- ارتباط با جدول entries در Supabase ---
+
+    async function loadEntriesFromServer() {
+      if (!currentUserCode) return [];
+      const { data, error } = await supa
+        .from('entries')
+        .select('*')
+        .eq('user_code', currentUserCode)
+        .order('timestamp', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        alert("خطا در خواندن داده از Supabase (اینترنت یا تنظیمات پروژه را چک کنید).");
+        return [];
+      }
+      return data || [];
+    }
+
+    async function saveEntryToServer(entry) {
+      if (!currentUserCode) {
+        alert("کد کاربر تنظیم نشده است.");
+        return;
+      }
+      const { error } = await supa
+        .from('entries')
+        .upsert(entry, { onConflict: 'id' });
+
+      if (error) {
+        console.error(error);
+        alert("خطا در ذخیره روی Supabase.");
+      }
+    }
+
+    // --- مدیریت جدول روی صفحه ---
+
+    function renderTable() {
+      const tbody = document.querySelector('#entriesTable tbody');
+      tbody.innerHTML = '';
+
+      const sorted = [...entries].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      for (const e of sorted) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = String(e.id);
+
+        function addCell(field, value) {
+          const td = document.createElement('td');
+          td.dataset.field = field;
+          td.textContent = (value !== null && value !== undefined && value !== '') ? value : '';
+          tr.appendChild(td);
+        }
+
+        addCell('date', e.date || '');
+        addCell('time', e.time || '');
+        addCell('infusion_volume', e.infusion_volume ?? '');
+        addCell('infusion_type', e.infusion_type ?? '');
+        addCell('oral_intake', e.oral_intake ?? '');
+        addCell('nephro_right', e.nephro_right ?? '');
+        addCell('nephro_left', e.nephro_left ?? '');
+        addCell('ileostomy', e.ileostomy ?? '');
+        addCell('colostomy', e.colostomy ?? '');
+        addCell('vomiting', e.vomiting ?? '');
+        addCell('notes', e.notes ?? '');
+
+        tbody.appendChild(tr);
+      }
+      highlightActiveRow();
+    }
+
+    function setCurrentEditingId(id) {
+      currentEditingId = id;
+      updateCurrentRowLabel();
+    }
+
+    function updateCurrentRowLabel() {
+      const label = document.getElementById('currentRowLabel');
+      if (!currentEditingId) {
+        label.textContent = 'هیچ ردیف فعالی انتخاب نشده است.';
+      } else {
+        const entry = entries.find(e => e.id === currentEditingId);
+        if (entry) {
+          label.textContent = `ردیف فعال: ${entry.date || 'بدون تاریخ'} - ${entry.time || 'بدون ساعت'}`;
+        } else {
+          label.textContent = 'هیچ ردیف فعالی انتخاب نشده است.';
+          currentEditingId = null;
+        }
+      }
+      highlightActiveRow();
+    }
+
+    function highlightActiveRow() {
+      const rows = document.querySelectorAll('#entriesTable tbody tr');
+      rows.forEach(tr => {
+        const id = Number(tr.dataset.id);
+        if (currentEditingId && id === currentEditingId) {
+          tr.classList.add('active-row');
+        } else {
+          tr.classList.remove('active-row');
+        }
+      });
+    }
+
+    async function addNewRow() {
+      if (!currentUserCode) {
+        alert("اول کد کاربر را تنظیم کنید.");
+        return;
+      }
+      const now = new Date();
+      const dateStr = formatDateInput(now);
+      const timeStr = formatTime(now);
+      const newId = Date.now();
+
+      const entry = {
+        id: newId,
+        user_code: currentUserCode,
+        timestamp: now.getTime(),
+        date: dateStr,
+        time: timeStr,
+        infusion_volume: null,
+        infusion_type: null,
+        oral_intake: null,
+        nephro_right: null,
+        nephro_left: null,
+        ileostomy: null,
+        colostomy: null,
+        vomiting: null,
+        notes: null
+      };
+
+      entries.push(entry);
+      renderTable();
+      setCurrentEditingId(newId);
+      updateSummaryForSelectedDate();
+
+      await saveEntryToServer(entry);
+    }
+
+    async function editField(entryId, field) {
+      const entry = entries.find(e => e.id === entryId);
+      if (!entry) return;
+
+      if (field === 'date') {
+        const val = prompt('تاریخ (فرمت YYYY-MM-DD، مثلا 2025-11-21):', entry.date || '');
+        if (val === null) return;
+        entry.date = val.trim();
+      } else if (field === 'time') {
+        const val = prompt('ساعت (فرمت HH:MM، مثلا 14:30):', entry.time || '');
+        if (val === null) return;
+        entry.time = val.trim();
+      } else if (field === 'infusion_type' || field === 'notes') {
+        const val = prompt(field === 'infusion_type' ? 'نوع تزریق:' : 'توضیحات:', entry[field] || '');
+        if (val === null) return;
+        entry[field] = val.trim() || null;
+      } else {
+        const oldVal = entry[field] != null ? String(entry[field]) : '';
+        const val = prompt('مقدار به cc (فقط عدد، خالی = حذف):', oldVal);
+        if (val === null) return;
+        const t = val.trim();
+        if (t === '') {
+          entry[field] = null;
+        } else {
+          const num = Number(t);
+          if (Number.isNaN(num)) {
+            alert('مقدار وارد شده عدد نیست.');
+            return;
+          }
+          entry[field] = num;
+        }
+      }
+
+      const ts = deriveTimestamp(entry.date, entry.time);
+      if (ts) entry.timestamp = ts;
+
+      renderTable();
+      updateSummaryForSelectedDate();
+      await saveEntryToServer(entry);
+    }
+
+    function editActiveField(field) {
+      if (!currentEditingId) {
+        alert('اول باید یک ردیف جدید شروع کنید یا روی یک ردیف در جدول کلیک کنید.');
+        return;
+      }
+      editField(currentEditingId, field);
+    }
+
+    // --- خلاصه روزانه ---
+
+    function calculateSummaryForDate(dateStr) {
+      const dayEntries = entries.filter(e => e.date === dateStr);
+
+      const sum = (field) =>
+        dayEntries.reduce((acc, e) => acc + (Number(e[field]) || 0), 0);
+
+      const res = {
+        infusionTotal: sum('infusion_volume'),
+        oralTotal: sum('oral_intake'),
+        nephroRightTotal: sum('nephro_right'),
+        nephroLeftTotal: sum('nephro_left'),
+        ileostomyTotal: sum('ileostomy'),
+        colostomyTotal: sum('colostomy'),
+        vomitingTotal: sum('vomiting')
+      };
+      res.inputTotal = res.infusionTotal + res.oralTotal;
+      res.outputTotal =
+        res.nephroRightTotal +
+        res.nephroLeftTotal +
+        res.ileostomyTotal +
+        res.colostomyTotal +
+        res.vomitingTotal;
+      res.netBalance = res.inputTotal - res.outputTotal;
+      return res;
+    }
+
+    function buildSummaryText(summary, dateStr) {
+      return [
+        `تاریخ گزارش: ${dateStr}`,
+        '',
+        'ورودی‌ها:',
+        `- تزریق: ${summary.infusionTotal} cc`,
+        `- نوشیدنی: ${summary.oralTotal} cc`,
+        `مجموع ورودی: ${summary.inputTotal} cc`,
+        '',
+        'خروجی‌ها:',
+        `- نفروستومی راست: ${summary.nephroRightTotal} cc`,
+        `- نفروستومی چپ: ${summary.nephroLeftTotal} cc`,
+        `- ایلوستومی: ${summary.ileostomyTotal} cc`,
+        `- کلستومی: ${summary.colostomyTotal} cc`,
+        `- استفراغ: ${summary.vomitingTotal} cc`,
+        `مجموع خروجی: ${summary.outputTotal} cc`,
+        '',
+        `تراز مایع (ورودی - خروجی): ${summary.netBalance} cc`
+      ].join('\n');
+    }
+
+    async function updateSummaryForSelectedDate() {
+      const dateInput = document.getElementById('reportDate');
+      const dateStr = dateInput.value;
+      const summaryEl = document.getElementById('summaryText');
+      if (!dateStr) {
+        summaryEl.textContent = 'لطفاً تاریخ گزارش را انتخاب کنید.';
+        return;
+      }
+      const summary = calculateSummaryForDate(dateStr);
+      summaryEl.textContent = buildSummaryText(summary, dateStr);
+    }
+
+    // --- نمودار ترند ---
+
+    async function drawTrendChart() {
+      if (!currentUserCode) {
+        alert("اول کد کاربر را تنظیم کنید.");
+        return;
+      }
+      const fromDate = document.getElementById('chartFromDate').value;
+      const toDate = document.getElementById('chartToDate').value;
+      const metric = document.getElementById('chartMetric').value;
+
+      if (!fromDate || !toDate) {
+        alert('لطفاً هر دو تاریخ «از» و «تا» را وارد کنید.');
+        return;
+      }
+      if (fromDate > toDate) {
+        alert('تاریخ شروع نباید بعد از تاریخ پایان باشد.');
+        return;
+      }
+
+      // آخرین داده‌ها را از سرور بگیر
+      entries = await loadEntriesFromServer();
+
+      const filtered = entries.filter(e =>
+        e.date &&
+        e.date >= fromDate &&
+        e.date <= toDate
+      );
+
+      if (filtered.length === 0) {
+        alert('در این بازه‌ی زمانی داده‌ای ثبت نشده است.');
+        return;
+      }
+
+      const map = new Map(); // date -> sum
+      for (const e of filtered) {
+        const d = e.date;
+        const v = Number(e[metric]) || 0;
+        map.set(d, (map.get(d) || 0) + v);
+      }
+
+      const dates = Array.from(map.keys()).sort();
+      const data = dates.map(d => map.get(d));
+
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (trendChartInstance) trendChartInstance.destroy();
+
+      trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: metricLabels[metric] || metric,
+            data: data,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.parsed.y} cc`
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: 'تاریخ' } },
+            y: {
+              title: { display: true, text: 'مقدار (cc)' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // --- init ---
+
+    async function initApp() {
+      const today = new Date();
+      const todayStr = formatDateInput(today);
+      const reportDateInput = document.getElementById('reportDate');
+      reportDateInput.value = todayStr;
+
+      const chartFromInput = document.getElementById('chartFromDate');
+      const chartToInput = document.getElementById('chartToDate');
+      const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      chartToInput.value = todayStr;
+      chartFromInput.value = formatDateInput(weekAgo);
+
+      getOrInitUserCode();
+
+      entries = await loadEntriesFromServer();
+      renderTable();
+      updateCurrentRowLabel();
+      updateSummaryForSelectedDate();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('newRowBtn').addEventListener('click', () => {
+        addNewRow().catch(console.error);
+      });
+
+      document.getElementById('refreshSummaryBtn').addEventListener('click', async () => {
+        entries = await loadEntriesFromServer();
+        renderTable();
+        updateSummaryForSelectedDate();
+      });
+
+      document.getElementById('drawChartBtn').addEventListener('click', () => {
+        drawTrendChart().catch(console.error);
+      });
+
+      document.getElementById('finishRowBtn').addEventListener('click', () => {
+        currentEditingId = null;
+        updateCurrentRowLabel();
+      });
+
+      const tbody = document.querySelector('#entriesTable tbody');
+      tbody.addEventListener('click', (e) => {
+        const td = e.target.closest('td');
+        if (!td) return;
+        const tr = td.parentElement;
+        const id = Number(tr.dataset.id);
+        if (!id) return;
+        currentEditingId = id;
+        updateCurrentRowLabel();
+        const field = td.dataset.field;
+        if (field) editField(id, field);
+      });
+
+      document.querySelector('.side-buttons').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-field]');
+        if (!btn) return;
+        const field = btn.getAttribute('data-field');
+        editActiveField(field);
+      });
+
+      document.getElementById('changeUserBtn').addEventListener('click', async () => {
+        const input = prompt(
+          "کد جدید کاربر را وارد کنید (همان کدی که در دستگاه‌های دیگر هم استفاده می‌کنید):",
+          currentUserCode || ""
+        );
+        if (input === null) return;
+        const trimmed = input.trim();
+        if (!trimmed) {
+          alert("کد نباید خالی باشد.");
+          return;
+        }
+        setUserCode(trimmed);
+        entries = await loadEntriesFromServer();
+        renderTable();
+        updateCurrentRowLabel();
+        updateSummaryForSelectedDate();
+      });
+
+      initApp().catch(e => {
+        console.error(e);
+        alert("خطا در راه‌اندازی برنامه (تنظیمات Supabase را چک کنید).");
+      });
+    });
+  </script>
+</body>
+</html>
