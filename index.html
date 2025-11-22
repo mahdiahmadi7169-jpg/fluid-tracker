@@ -12,7 +12,7 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Tahoma, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #f5f5f5;
       color: #222;
     }
@@ -60,7 +60,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
       margin-bottom: 12px;
       white-space: pre-wrap;
-      font-family: monospace;
+      font-family: Tahoma, monospace;
       font-size: 13px;
     }
 
@@ -71,19 +71,21 @@
       align-items: flex-start;
     }
     .table-wrapper {
-      flex: 1 1 60%;
+      flex: 1 1 100%;
       min-width: 280px;
       background: #ffffff;
       border-radius: 10px;
       padding: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
       max-height: 60vh;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: auto;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      min-width: 900px;
     }
     thead {
       position: sticky;
@@ -98,28 +100,20 @@
     }
     th { font-weight: 600; }
     tr:nth-child(even) td { background: #fafafa; }
-    tr.active-row td { background: #e0f7fa !important; }
+    tr.active-row td { outline: 2px solid #0288d1; }
 
-    .side-panel {
-      flex: 1 1 35%;
-      min-width: 220px;
-      background: #ffffff;
-      border-radius: 10px;
-      padding: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      font-size: 13px;
-    }
-    .side-panel h3 { margin-top: 0; font-size: 16px; }
-    .side-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 6px;
-    }
-    .side-buttons button {
+    /* رنگ ستون‌ها */
+    .input-header, .input-col { background-color: #d2f4ff; }
+    .output-header, .output-col { background-color: #fffafe; }
+    .notes-header, .notes-col { background-color: #ecffef; }
+
+    .save-col button {
       width: 100%;
-      text-align: center;
-      font-size: 13px;
+      padding: 4px 6px;
+      font-size: 11px;
+      border-radius: 4px;
+      background: #00897b;
+      color: #fff;
     }
 
     .chart-card {
@@ -140,7 +134,7 @@
 
     @media (max-width: 768px) {
       .layout { flex-direction: column; }
-      .table-wrapper { max-height: 40vh; }
+      .table-wrapper { max-height: 50vh; }
     }
   </style>
 </head>
@@ -165,7 +159,31 @@
       <pre id="summaryText">در حال بارگذاری...</pre>
     </div>
 
-    <!-- نمودار ترند -->
+    <div class="layout">
+      <div class="table-wrapper">
+        <table id="entriesTable">
+          <thead>
+            <tr>
+              <th>تاریخ</th>
+              <th>ساعت</th>
+              <th class="input-header">تزریق (cc)</th>
+              <th>نوع تزریق</th>
+              <th class="input-header">نوشیدنی (cc)</th>
+              <th class="output-header">نفرو راست (cc)</th>
+              <th class="output-header">نفرو چپ (cc)</th>
+              <th class="output-header">ایلوستومی (cc)</th>
+              <th class="output-header">کلستومی (cc)</th>
+              <th class="output-header">استفراغ (cc)</th>
+              <th class="notes-header">توضیحات</th>
+              <th class="save-col">ذخیره</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- نمودار ترند در انتهای صفحه -->
     <div class="chart-card">
       <div class="chart-controls">
         <span>بازه تاریخ نمودار:</span>
@@ -189,58 +207,13 @@
       </div>
       <canvas id="trendChart" height="120"></canvas>
     </div>
-
-    <div class="layout">
-      <div class="table-wrapper">
-        <table id="entriesTable">
-          <thead>
-            <tr>
-              <th>تاریخ</th>
-              <th>ساعت</th>
-              <th>تزریق (cc)</th>
-              <th>نوع تزریق</th>
-              <th>نوشیدنی (cc)</th>
-              <th>نفرو راست (cc)</th>
-              <th>نفرو چپ (cc)</th>
-              <th>ایلوستومی (cc)</th>
-              <th>کلستومی (cc)</th>
-              <th>استفراغ (cc)</th>
-              <th>توضیحات</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <aside class="side-panel">
-        <h3>ورود / ویرایش ردیف</h3>
-        <p id="currentRowLabel">هیچ ردیف فعالی انتخاب نشده است.</p>
-        <p style="font-size:12px;">
-          ➤ روی <b>«شروع ردیف جدید»</b> بزن، بعد از دکمه‌های زیر برای پر کردن ستون‌های دلخواه استفاده کن.  
-          برای ویرایش ردیف‌های قبلی، روی سلول جدول کلیک کن.
-        </p>
-        <div class="side-buttons">
-          <button data-field="date" class="secondary">تغییر تاریخ</button>
-          <button data-field="time" class="secondary">تغییر ساعت</button>
-          <button data-field="infusion_volume">مقدار تزریق (cc)</button>
-          <button data-field="infusion_type">نوع تزریق</button>
-          <button data-field="oral_intake">نوشیدنی (cc)</button>
-          <button data-field="nephro_right">نفروستومی راست (cc)</button>
-          <button data-field="nephro_left">نفروستومی چپ (cc)</button>
-          <button data-field="ileostomy">ایلوستومی (cc)</button>
-          <button data-field="colostomy">کلستومی (cc)</button>
-          <button data-field="vomiting">استفراغ (cc)</button>
-          <button data-field="notes" class="secondary">توضیحات</button>
-          <button id="finishRowBtn" class="danger">پایان ردیف فعال</button>
-        </div>
-      </aside>
-    </div>
   </div>
 
   <script>
     // === ۱. تنظیم اتصال به Supabase ===
-    const supabaseUrl = "https://mmlvqmptvjeldxvkycrx.supabase.co"; // مثل: https://xxxx.supabase.co
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbHZxbXB0dmplbGR4dmt5Y3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTUwODUsImV4cCI6MjA3OTMzMTA4NX0.bU65ru6zNAryNQQgkxCAU2mA-zQiwZCuCkOIZek4HJo"; // anon public
+    const supabaseUrl = "https://mmlvqmptvjeldxvkycrx.supabase.co";        // <-- این را با URL خودت عوض کن
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbHZxbXB0dmplbGR4dmt5Y3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTUwODUsImV4cCI6MjA3OTMzMTA4NX0.bU65ru6zNAryNQQgkxCAU2mA-zQiwZCuCkOIZek4HJo"; // <-- این را هم با anon key خودت
+
     const supa = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
     const STORAGE_USER_KEY = 'fluid_supabase_user_code_v1';
@@ -288,7 +261,7 @@
     function askUserCode() {
       let code = null;
       while (!code) {
-        const input = prompt("یک کد اختصاصی برای خودتان وارد کنید (مثلاً: mahdi-fluid-1404). این کد را روی تمام دستگاه‌ها یکسان وارد کنید:", "");
+        const input = prompt("یک کد اختصاصی برای خودتان وارد کنید (مثلاً: farnaz-1404). این کد را روی تمام دستگاه‌ها یکسان وارد کنید:", "");
         if (input === null) {
           alert("بدون کد کاربر، برنامه نمی‌تواند به دیتابیس مشترک وصل شود.");
           continue;
@@ -362,7 +335,23 @@
         function addCell(field, value) {
           const td = document.createElement('td');
           td.dataset.field = field;
-          td.textContent = (value !== null && value !== undefined && value !== '') ? value : '';
+          if (['infusion_volume','oral_intake'].includes(field)) {
+            td.classList.add('input-col');
+          }
+          if (['nephro_right','nephro_left','ileostomy','colostomy','vomiting'].includes(field)) {
+            td.classList.add('output-col');
+          }
+          if (field === 'notes') {
+            td.classList.add('notes-col');
+          }
+          if (field === 'save') {
+            td.classList.add('save-col');
+            const btn = document.createElement('button');
+            btn.textContent = 'Save';
+            td.appendChild(btn);
+          } else {
+            td.textContent = (value !== null && value !== undefined && value !== '') ? value : '';
+          }
           tr.appendChild(td);
         }
 
@@ -377,6 +366,7 @@
         addCell('colostomy', e.colostomy ?? '');
         addCell('vomiting', e.vomiting ?? '');
         addCell('notes', e.notes ?? '');
+        addCell('save', '');
 
         tbody.appendChild(tr);
       }
@@ -389,18 +379,7 @@
     }
 
     function updateCurrentRowLabel() {
-      const label = document.getElementById('currentRowLabel');
-      if (!currentEditingId) {
-        label.textContent = 'هیچ ردیف فعالی انتخاب نشده است.';
-      } else {
-        const entry = entries.find(e => e.id === currentEditingId);
-        if (entry) {
-          label.textContent = `ردیف فعال: ${entry.date || 'بدون تاریخ'} - ${entry.time || 'بدون ساعت'}`;
-        } else {
-          label.textContent = 'هیچ ردیف فعالی انتخاب نشده است.';
-          currentEditingId = null;
-        }
-      }
+      const label = document.getElementById('summaryText'); // فقط برای وضعیت از بالا استفاده نمی‌کنیم
       highlightActiveRow();
     }
 
@@ -424,10 +403,9 @@
       const now = new Date();
       const dateStr = formatDateInput(now);
       const timeStr = formatTime(now);
-      const newId = Date.now();
 
       const entry = {
-        id: newId,
+        id: Date.now(), // چون ستون identity هم داری، اگر خواستی می‌توانیم عوض کنیم
         user_code: currentUserCode,
         timestamp: now.getTime(),
         date: dateStr,
@@ -445,7 +423,7 @@
 
       entries.push(entry);
       renderTable();
-      setCurrentEditingId(newId);
+      setCurrentEditingId(entry.id);
       updateSummaryForSelectedDate();
 
       await saveEntryToServer(entry);
@@ -456,7 +434,7 @@
       if (!entry) return;
 
       if (field === 'date') {
-        const val = prompt('تاریخ (فرمت YYYY-MM-DD، مثلا 2025-11-21):', entry.date || '');
+        const val = prompt('تاریخ (فرمت YYYY-MM-DD، مثلا 2025-11-22):', entry.date || '');
         if (val === null) return;
         entry.date = val.trim();
       } else if (field === 'time') {
@@ -467,7 +445,7 @@
         const val = prompt(field === 'infusion_type' ? 'نوع تزریق:' : 'توضیحات:', entry[field] || '');
         if (val === null) return;
         entry[field] = val.trim() || null;
-      } else {
+      } else if (['infusion_volume','oral_intake','nephro_right','nephro_left','ileostomy','colostomy','vomiting'].includes(field)) {
         const oldVal = entry[field] != null ? String(entry[field]) : '';
         const val = prompt('مقدار به cc (فقط عدد، خالی = حذف):', oldVal);
         if (val === null) return;
@@ -482,6 +460,8 @@
           }
           entry[field] = num;
         }
+      } else {
+        return;
       }
 
       const ts = deriveTimestamp(entry.date, entry.time);
@@ -490,14 +470,6 @@
       renderTable();
       updateSummaryForSelectedDate();
       await saveEntryToServer(entry);
-    }
-
-    function editActiveField(field) {
-      if (!currentEditingId) {
-        alert('اول باید یک ردیف جدید شروع کنید یا روی یک ردیف در جدول کلیک کنید.');
-        return;
-      }
-      editField(currentEditingId, field);
     }
 
     // --- خلاصه روزانه ---
@@ -549,7 +521,7 @@
       ].join('\n');
     }
 
-    async function updateSummaryForSelectedDate() {
+    function updateSummaryForSelectedDate() {
       const dateInput = document.getElementById('reportDate');
       const dateStr = dateInput.value;
       const summaryEl = document.getElementById('summaryText');
@@ -581,7 +553,6 @@
         return;
       }
 
-      // آخرین داده‌ها را از سرور بگیر
       entries = await loadEntriesFromServer();
 
       const filtered = entries.filter(e =>
@@ -657,7 +628,6 @@
 
       entries = await loadEntriesFromServer();
       renderTable();
-      updateCurrentRowLabel();
       updateSummaryForSelectedDate();
     }
 
@@ -676,11 +646,6 @@
         drawTrendChart().catch(console.error);
       });
 
-      document.getElementById('finishRowBtn').addEventListener('click', () => {
-        currentEditingId = null;
-        updateCurrentRowLabel();
-      });
-
       const tbody = document.querySelector('#entriesTable tbody');
       tbody.addEventListener('click', (e) => {
         const td = e.target.closest('td');
@@ -688,17 +653,21 @@
         const tr = td.parentElement;
         const id = Number(tr.dataset.id);
         if (!id) return;
-        currentEditingId = id;
-        updateCurrentRowLabel();
-        const field = td.dataset.field;
-        if (field) editField(id, field);
-      });
 
-      document.querySelector('.side-buttons').addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-field]');
-        if (!btn) return;
-        const field = btn.getAttribute('data-field');
-        editActiveField(field);
+        const field = td.dataset.field;
+
+        // اگر روی ستون ذخیره زد، فقط ردیف را از حالت فعال خارج کن
+        if (field === 'save') {
+          currentEditingId = null;
+          highlightActiveRow();
+          return;
+        }
+
+        currentEditingId = id;
+        highlightActiveRow();
+        if (field) {
+          editField(id, field);
+        }
       });
 
       document.getElementById('changeUserBtn').addEventListener('click', async () => {
@@ -715,7 +684,6 @@
         setUserCode(trimmed);
         entries = await loadEntriesFromServer();
         renderTable();
-        updateCurrentRowLabel();
         updateSummaryForSelectedDate();
       });
 
