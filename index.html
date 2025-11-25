@@ -241,7 +241,8 @@
     </div>
 
     <div class="top-bar">
-      <button id="newRowBtn">جدید چی داری بگی</button>
+      <!-- این دکمه حالا مستقیم تابع global را صدا می‌زند -->
+      <button id="newRowBtn" onclick="openEntryModalFromButton()">جدید چی داری بگی</button>
       <span>تاریخ گزارش روزانه:</span>
       <input type="date" id="reportDate" />
       <button id="refreshSummaryBtn" class="secondary">همگام‌سازی و به‌روزرسانی</button>
@@ -853,6 +854,16 @@
       entryModal.style.display = "flex";
     }
 
+    // برای دکمه HTML روی موبایل/دسکتاپ
+    function openEntryModalFromButton() {
+      try {
+        openEntryModal();
+      } catch (e) {
+        console.error("Error in openEntryModalFromButton:", e);
+        alert("خطا در باز کردن پنجره ردیف جدید. یک بار رفرش کن و دوباره امتحان کن.");
+      }
+    }
+
     function closeEntryModal(discard) {
       if (discard) draftEntry = null;
       entryModal.classList.add("hidden");
@@ -989,10 +1000,6 @@
       entryModal.style.display = "none";
       fieldModalOverlay.classList.add("hidden");
       fieldModalOverlay.style.display = "none";
-
-      document.getElementById("newRowBtn").addEventListener("click", () => {
-        openEntryModal();
-      });
 
       document.getElementById("refreshSummaryBtn").addEventListener("click", async () => {
         entries = await loadEntriesFromServer();
