@@ -59,9 +59,12 @@
       padding: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
       margin-bottom: 12px;
-      white-space: pre-wrap;
       font-family: Tahoma, monospace;
       font-size: 13px;
+    }
+    .summary-card pre {
+      white-space: pre-wrap;
+      margin: 0;
     }
 
     .layout {
@@ -132,104 +135,97 @@
       font-size: 13px;
     }
 
-    /* مودال ورود ردیف جدید */
-    .modal {
+    /* مودال‌ها */
+    .hidden { display: none; }
+
+    .modal-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.4);
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 999;
     }
-    .modal.show { display: flex; }
-    .modal-content {
+    .modal {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 12px;
-      max-width: 900px;
-      width: 95%;
-      max-height: 90vh;
-      overflow: auto;
+      border-radius: 10px;
+      padding: 16px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       font-size: 13px;
     }
-    .modal-title {
-      font-weight: bold;
+    .modal h3 {
+      margin-top: 0;
       margin-bottom: 8px;
       text-align: center;
     }
-    .field-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(140px, 1fr));
+    .modal-datetime {
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
-    }
-    .field-box {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .field-label {
-      font-weight: bold;
-      font-size: 12px;
-      text-align: center;
-    }
-    .field-box input, .field-box textarea {
-      padding: 4px 6px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      font-size: 12px;
-      text-align: center;
-      font-family: Tahoma, sans-serif;
-    }
-    .field-box textarea {
-      resize: vertical;
-      min-height: 40px;
-      text-align: right;
-    }
-    .field-actions {
-      display: flex;
-      gap: 4px;
+      align-items: center;
       justify-content: space-between;
+      margin-bottom: 8px;
     }
-    .mini-btn {
-      flex: 1;
-      padding: 4px 6px;
+    .modal-datetime span {
+      font-size: 12px;
+    }
+    .modal-datetime button {
       font-size: 11px;
-      border-radius: 4px;
+      padding: 4px 8px;
+    }
+    .modal-datetime-edit {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .modal-grid button {
+      padding: 8px 6px;
+      font-size: 11px;
+      background: #eeeeee;
+      color: #222;
+      border-radius: 6px;
       border: none;
       cursor: pointer;
     }
-    .mini-btn.confirm { background: #1976d2; color: #fff; }
-    .mini-btn.cancel  { background: #b0bec5; color: #000; }
-
     .modal-footer {
-      margin-top: 10px;
       display: flex;
-      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 8px;
-      justify-content: space-between;
-      align-items: center;
+      margin-top: 4px;
     }
-    .modal-footer-left {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
+
+    .modal.small {
+      max-width: 360px;
     }
-    .modal-footer-right {
+    .modal-field-body {
+      margin: 10px 0;
       display: flex;
-      gap: 8px;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .modal-field-body input {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: Tahoma, sans-serif;
     }
 
     @media (max-width: 768px) {
       .layout { flex-direction: column; }
       .table-wrapper { max-height: 50vh; }
-      .field-grid {
-        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      .modal-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   </style>
@@ -253,6 +249,7 @@
 
     <div class="summary-card">
       <pre id="summaryText">در حال بارگذاری...</pre>
+      <div id="hydrationMessage" style="margin-top:8px;font-size:13px;font-weight:bold;color:#d32f2f;"></div>
     </div>
 
     <div class="layout">
@@ -279,108 +276,49 @@
       </div>
     </div>
 
-    <!-- مودال ورود ردیف جدید -->
-    <div class="modal" id="entryModal">
-      <div class="modal-content">
-        <div class="modal-title">ورود ردیف جدید</div>
-        <p style="font-size:12px; text-align:center;">
-          روی هر باکس مقدار را وارد کن، «تأیید» بزن تا ثبت شود. در پایان از دکمه «ذخیره» پایین استفاده کن.
-        </p>
-        <div class="field-grid">
-          <!-- 8 باکس اصلی -->
-          <div class="field-box" data-field="infusion_volume">
-            <div class="field-label">تزریق (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="oral_intake">
-            <div class="field-label">نوشیدنی (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="nephro_right">
-            <div class="field-label">نفرو راست (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="nephro_left">
-            <div class="field-label">نفرو چپ (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-
-          <div class="field-box" data-field="ileostomy">
-            <div class="field-label">ایلوستومی (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="colostomy">
-            <div class="field-label">کلستومی (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="vomiting">
-            <div class="field-label">استفراغ (cc)</div>
-            <input type="number" inputmode="decimal" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
-          <div class="field-box" data-field="notes">
-            <div class="field-label">توضیحات (TEXT)</div>
-            <textarea></textarea>
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
+    <!-- مودال اصلی ورود ردیف جدید -->
+    <div id="entryModalOverlay" class="modal-overlay hidden">
+      <div class="modal">
+        <h3>ثبت ردیف جدید</h3>
+        <div class="modal-datetime">
+          <span>تاریخ: <span id="modalDateText"></span></span>
+          <span>ساعت: <span id="modalTimeText"></span></span>
+          <button id="editDateTimeBtn" class="secondary">ویرایش تاریخ و ساعت</button>
         </div>
-
-        <!-- نوع تزریق جداگانه -->
-        <div style="margin-top:10px;">
-          <div class="field-box" data-field="infusion_type">
-            <div class="field-label">نوع تزریق (TEXT)</div>
-            <input type="text" />
-            <div class="field-actions">
-              <button type="button" class="mini-btn confirm">تأیید</button>
-              <button type="button" class="mini-btn cancel">کنسل</button>
-            </div>
-          </div>
+        <div id="modalDateTimeEditors" class="modal-datetime-edit hidden">
+          <input type="date" id="modalDateInput" />
+          <input type="time" id="modalTimeInput" step="60" />
         </div>
-
+        <div style="font-size:11px; margin-bottom:6px; text-align:center;">
+          برای هر مورد، روی دکمه بزنید، مقدار را وارد کنید و تأیید/کنسل کنید.
+        </div>
+        <div class="modal-grid">
+          <button type="button" data-field="infusion_volume">تزریق (cc)</button>
+          <button type="button" data-field="oral_intake">نوشیدنی (cc)</button>
+          <button type="button" data-field="nephro_right">نفرو راست (cc)</button>
+          <button type="button" data-field="nephro_left">نفرو چپ (cc)</button>
+          <button type="button" data-field="ileostomy">ایلوستومی (cc)</button>
+          <button type="button" data-field="colostomy">کلستومی (cc)</button>
+          <button type="button" data-field="vomiting">استفراغ (cc)</button>
+          <button type="button" data-field="notes">توضیحات</button>
+        </div>
         <div class="modal-footer">
-          <div class="modal-footer-left">
-            <span>تاریخ:</span>
-            <input type="date" id="modalDate" disabled />
-            <span>ساعت (24 ساعته):</span>
-            <input type="time" id="modalTime" dir="ltr" disabled />
-            <button type="button" id="editDateTimeBtn" class="secondary" style="font-size:12px;">
-              ویرایش تاریخ و ساعت
-            </button>
-          </div>
-          <div class="modal-footer-right">
-            <button type="button" id="modalSaveBtn">ذخیره</button>
-            <button type="button" id="modalCancelBtn" class="secondary">کنسل</button>
-          </div>
+          <button id="entryModalSaveBtn">ذخیره</button>
+          <button id="entryModalCancelBtn" class="secondary">کنسل</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- مودال ویرایش یک فیلد -->
+    <div id="fieldModalOverlay" class="modal-overlay hidden">
+      <div class="modal small">
+        <h3 id="fieldModalTitle">ویرایش</h3>
+        <div class="modal-field-body">
+          <input id="fieldModalInput" type="number" dir="ltr" />
+        </div>
+        <div class="modal-footer">
+          <button id="fieldModalConfirmBtn">تأیید</button>
+          <button id="fieldModalCancelBtn" class="secondary">انصراف</button>
         </div>
       </div>
     </div>
@@ -425,6 +363,18 @@
     let currentEditingId = null;
     let trendChartInstance = null;
     let draftEntry = null; // برای مودال
+
+    const fieldTitles = {
+      infusion_volume: "تزریق (cc)",
+      oral_intake: "نوشیدنی (cc)",
+      nephro_right: "نفرو راست (cc)",
+      nephro_left: "نفرو چپ (cc)",
+      ileostomy: "ایلوستومی (cc)",
+      colostomy: "کلستومی (cc)",
+      vomiting: "استفراغ (cc)",
+      notes: "توضیحات",
+      infusion_type: "نوع تزریق"
+    };
 
     const metricLabels = {
       infusion_volume: "تزریق (cc)",
@@ -673,6 +623,7 @@
 
       renderTable();
       updateSummaryForSelectedDate();
+      checkHydrationStatus();
       await saveEntryToServer(entry);
     }
 
@@ -738,6 +689,47 @@
       }
       const summary = calculateSummaryForDate(dateStr);
       summaryEl.textContent = buildSummaryText(summary, dateStr);
+    }
+
+    // --- پیام وضعیت مایعات (امروز + ۳ روز قبل) ---
+
+    function checkHydrationStatus() {
+      const msgEl = document.getElementById("hydrationMessage");
+      if (!msgEl) return;
+
+      if (!entries || entries.length === 0) {
+        msgEl.textContent = "";
+        return;
+      }
+
+      const today = new Date();
+      const todayStr = formatDateInput(today);
+      const todaySummary = calculateSummaryForDate(todayStr);
+      const todayNet = todaySummary.netBalance;
+
+      const messages = [];
+
+      if (todayNet < 0) {
+        messages.push("بچه مایعات بخور ، عقب هستیا! 🥤");
+      } else if (todayNet > 0) {
+        messages.push("آفرییییین 👏 مایعات جلو هستی!");
+      } else {
+        messages.push("امروز تراز مایعاتت صفره، نه جلو نه عقب.");
+      }
+
+      let negativeDays = 0;
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+        const dStr = formatDateInput(d);
+        const s = calculateSummaryForDate(dStr);
+        if (s.netBalance < 0) negativeDays++;
+      }
+
+      if (negativeDays > 0) {
+        messages.push(`تو سه روز قبل مایعات عقب بودیا 😬 (در ${negativeDays} روز از ۳ روز گذشته تراز منفی بوده)`);
+      }
+
+      msgEl.textContent = messages.join("\n");
     }
 
     // --- نمودار ---
@@ -824,43 +816,22 @@
 
     // --- مودال ردیف جدید ---
 
-    const entryModal = document.getElementById("entryModal");
-    const modalDateInput = document.getElementById("modalDate");
-    const modalTimeInput = document.getElementById("modalTime");
+    const entryModal = document.getElementById("entryModalOverlay");
+    const modalDateText = document.getElementById("modalDateText");
+    const modalTimeText = document.getElementById("modalTimeText");
+    const modalDateInput = document.getElementById("modalDateInput");
+    const modalTimeInput = document.getElementById("modalTimeInput");
 
     function resetModalFields() {
       document
-        .querySelectorAll("#entryModal .field-box")
-        .forEach((box) => {
-          const inp =
-            box.querySelector("input") ||
-            box.querySelector("textarea");
-          if (inp) inp.value = "";
+        .querySelectorAll("#entryModalOverlay .modal-grid button")
+        .forEach((btn) => {
+          const field = btn.getAttribute("data-field");
+          btn.textContent = fieldTitles[field] || field;
         });
     }
 
     function openEntryModal() {
-      resetModalFields();
-      // تاریخ / ساعت اولیه
-      const now = new Date();
-      const dateStr = formatDateInput(now);
-      const timeStr = formatTime(now);
-      modalDateInput.value = dateStr;
-      modalTimeInput.value = timeStr;
-      modalDateInput.disabled = true;
-      modalTimeInput.disabled = true;
-      document.getElementById("editDateTimeBtn").textContent =
-        "ویرایش تاریخ و ساعت";
-
-      entryModal.classList.add("show");
-    }
-
-    function closeEntryModal() {
-      entryModal.classList.remove("show");
-      draftEntry = null;
-    }
-
-    function startNewRow() {
       if (!currentUserCode) {
         alert("اول کد کاربر را تنظیم کنید.");
         return;
@@ -870,7 +841,7 @@
       const timeStr = formatTime(now);
 
       draftEntry = {
-        id: Date.now(), // آی‌دی موقتی، یکتا
+        id: Date.now(), // آی‌دی موقت
         user_code: currentUserCode,
         timestamp: now.getTime(),
         date: dateStr,
@@ -886,97 +857,130 @@
         notes: null,
       };
 
-      openEntryModal();
+      modalDateText.textContent = draftEntry.date;
+      modalTimeText.textContent = draftEntry.time;
+      modalDateInput.value = draftEntry.date;
+      modalTimeInput.value = draftEntry.time;
+      document
+        .getElementById("modalDateTimeEditors")
+        .classList.add("hidden");
+
+      resetModalFields();
+      entryModal.classList.remove("hidden");
     }
 
-    function handleFieldConfirm(field, inputEl) {
+    function closeEntryModal(discard) {
+      if (discard) draftEntry = null;
+      entryModal.classList.add("hidden");
+    }
+
+    const fieldModalOverlay = document.getElementById("fieldModalOverlay");
+    const fieldModalTitle = document.getElementById("fieldModalTitle");
+    const fieldModalInput = document.getElementById("fieldModalInput");
+    let currentFieldKey = null;
+
+    function openFieldModal(fieldKey) {
       if (!draftEntry) return;
-      const raw = inputEl.value.trim();
+      currentFieldKey = fieldKey;
 
-      if (field === "notes" || field === "infusion_type") {
-        draftEntry[field] = raw || null;
+      fieldModalTitle.textContent = fieldTitles[fieldKey] || "ویرایش";
+
+      if (fieldKey === "notes" || fieldKey === "infusion_type") {
+        fieldModalInput.type = "text";
+        fieldModalInput.dir = "rtl";
+      } else {
+        fieldModalInput.type = "number";
+        fieldModalInput.dir = "ltr";
+      }
+
+      const curVal = draftEntry[fieldKey];
+      fieldModalInput.value =
+        curVal !== null && curVal !== undefined ? curVal : "";
+      fieldModalOverlay.classList.remove("hidden");
+      fieldModalInput.focus();
+    }
+
+    function closeFieldModal() {
+      fieldModalOverlay.classList.add("hidden");
+      currentFieldKey = null;
+    }
+
+    function applyFieldModalConfirm() {
+      if (!draftEntry || !currentFieldKey) {
+        closeFieldModal();
         return;
       }
+      const val = fieldModalInput.value.trim();
 
-      // بقیه باید عدد باشند
-      if (raw === "") {
-        draftEntry[field] = null;
-        return;
+      if (currentFieldKey === "notes" || currentFieldKey === "infusion_type") {
+        draftEntry[currentFieldKey] = val || null;
+      } else {
+        if (val === "") {
+          draftEntry[currentFieldKey] = null;
+        } else {
+          const num = Number(val);
+          if (Number.isNaN(num)) {
+            alert("لطفاً مقدار عددی وارد کنید.");
+            return;
+          }
+          draftEntry[currentFieldKey] = num;
+        }
       }
-      const num = Number(raw);
-      if (Number.isNaN(num)) {
-        alert("فقط عدد مجاز است.");
-        return;
-      }
-      draftEntry[field] = num;
 
-      if (
-        field === "infusion_volume" &&
-        draftEntry.infusion_volume !== null &&
-        (!draftEntry.infusion_type ||
-          draftEntry.infusion_type.trim() === "")
-      ) {
-        alert("برای تزریق، نوع تزریق را هم وارد کنید.");
-        const itBox = document.querySelector(
-          '.field-box[data-field="infusion_type"] input'
-        );
-        if (itBox) itBox.focus();
+      // به‌روزرسانی متن روی دکمه‌ها
+      document
+        .querySelectorAll("#entryModalOverlay .modal-grid button")
+        .forEach((btn) => {
+          const field = btn.getAttribute("data-field");
+          const base = fieldTitles[field] || field;
+          const v = draftEntry[field];
+          btn.textContent =
+            v !== null && v !== undefined && v !== "" ? `${base} : ${v}` : base;
+        });
+
+      const justField = currentFieldKey;
+      closeFieldModal();
+
+      // اگر تزریق بود و مقدار دارد، نوع تزریق را بپرس
+      if (justField === "infusion_volume" && draftEntry.infusion_volume != null) {
+        openFieldModal("infusion_type");
       }
+    }
+
+    function applyFieldModalCancel() {
+      if (draftEntry && currentFieldKey) {
+        draftEntry[currentFieldKey] = null;
+      }
+      closeFieldModal();
+      document
+        .querySelectorAll("#entryModalOverlay .modal-grid button")
+        .forEach((btn) => {
+          const field = btn.getAttribute("data-field");
+          const base = fieldTitles[field] || field;
+          const v = draftEntry[field];
+          btn.textContent =
+            v !== null && v !== undefined && v !== "" ? `${base} : ${v}` : base;
+        });
     }
 
     async function saveDraftEntry() {
       if (!draftEntry) return;
 
-      const dateStr = modalDateInput.value;
-      const timeStr = modalTimeInput.value;
+      // تاریخ/ساعت از ادیتورها
+      if (modalDateInput.value) draftEntry.date = modalDateInput.value;
+      if (modalTimeInput.value) draftEntry.time = modalTimeInput.value;
 
-      if (!dateStr) {
-        alert("تاریخ را وارد کنید.");
-        return;
-      }
-
-      draftEntry.date = dateStr;
-      draftEntry.time = timeStr || draftEntry.time;
       const ts = deriveTimestamp(draftEntry.date, draftEntry.time);
-      if (ts) draftEntry.timestamp = ts;
-
-      const anyValue = [
-        "infusion_volume",
-        "oral_intake",
-        "nephro_right",
-        "nephro_left",
-        "ileostomy",
-        "colostomy",
-        "vomiting",
-        "notes",
-      ].some(
-        (f) =>
-          draftEntry[f] !== null &&
-          draftEntry[f] !== "" &&
-          draftEntry[f] !== undefined
-      );
-
-      if (!anyValue) {
-        const ok = confirm(
-          "هیچ مقداری وارد نشده. ردیف خالی ذخیره شود؟"
-        );
-        if (!ok) return;
-      }
-
-      if (
-        draftEntry.infusion_volume !== null &&
-        (!draftEntry.infusion_type ||
-          draftEntry.infusion_type.trim() === "")
-      ) {
-        alert("نوع تزریق را هم وارد کنید.");
-        return;
-      }
+      draftEntry.timestamp = ts || Date.now();
 
       entries.push(draftEntry);
       await saveEntryToServer(draftEntry);
       renderTable();
       updateSummaryForSelectedDate();
-      closeEntryModal();
+      checkHydrationStatus();
+
+      draftEntry = null;
+      closeEntryModal(false);
     }
 
     // --- init ---
@@ -1001,13 +1005,14 @@
       entries = await loadEntriesFromServer();
       renderTable();
       updateSummaryForSelectedDate();
+      checkHydrationStatus(); // 🔔 بررسی مایعات در ابتدای لود
     }
 
     document.addEventListener("DOMContentLoaded", () => {
       document
         .getElementById("newRowBtn")
         .addEventListener("click", () => {
-          startNewRow();
+          openEntryModal();
         });
 
       document
@@ -1016,6 +1021,7 @@
           entries = await loadEntriesFromServer();
           renderTable();
           updateSummaryForSelectedDate();
+          checkHydrationStatus(); // 🔔 بعد از به‌روزرسانی دستی
         });
 
       document
@@ -1037,7 +1043,6 @@
         const field = td.dataset.field;
 
         if (field === "save") {
-          // فقط ردیف فعال را خالی می‌کنیم
           currentEditingId = null;
           highlightActiveRow();
           return;
@@ -1067,67 +1072,53 @@
           entries = await loadEntriesFromServer();
           renderTable();
           updateSummaryForSelectedDate();
+          checkHydrationStatus();
         });
 
-      // دکمه‌های داخل مودال
-      document
-        .querySelectorAll("#entryModal .field-box")
-        .forEach((box) => {
-          const field = box.dataset.field;
-          const inputEl =
-            box.querySelector("input") ||
-            box.querySelector("textarea");
-          const confirmBtn = box.querySelector(
-            ".mini-btn.confirm"
-          );
-          const cancelBtn = box.querySelector(
-            ".mini-btn.cancel"
-          );
-
-          if (confirmBtn) {
-            confirmBtn.addEventListener("click", () =>
-              handleFieldConfirm(field, inputEl)
-            );
-          }
-          if (cancelBtn) {
-            cancelBtn.addEventListener("click", () => {
-              if (inputEl) inputEl.value = "";
-              if (!draftEntry) return;
-              if (field === "notes" || field === "infusion_type") {
-                draftEntry[field] = null;
-              } else {
-                draftEntry[field] = null;
-              }
-            });
-          }
-        });
-
+      // دکمه‌های مودال ردیف جدید
       document
         .getElementById("editDateTimeBtn")
         .addEventListener("click", () => {
-          const disabled = modalDateInput.disabled;
-          modalDateInput.disabled = !disabled;
-          modalTimeInput.disabled = !disabled;
-          document.getElementById(
-            "editDateTimeBtn"
-          ).textContent = disabled
-            ? "قفل کردن تاریخ و ساعت"
-            : "ویرایش تاریخ و ساعت";
+          const box = document.getElementById("modalDateTimeEditors");
+          box.classList.toggle("hidden");
         });
 
       document
-        .getElementById("modalSaveBtn")
+        .querySelectorAll("#entryModalOverlay .modal-grid button")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const field = btn.getAttribute("data-field");
+            if (!field) return;
+            openFieldModal(field);
+          });
+        });
+
+      document
+        .getElementById("entryModalSaveBtn")
         .addEventListener("click", () => {
           saveDraftEntry().catch(console.error);
         });
 
       document
-        .getElementById("modalCancelBtn")
+        .getElementById("entryModalCancelBtn")
         .addEventListener("click", () => {
           const ok = confirm(
             "آیا مطمئن هستید که می‌خواهید بدون ذخیره از این پنجره خارج شوید؟"
           );
-          if (ok) closeEntryModal();
+          if (ok) closeEntryModal(true);
+        });
+
+      // مودال فیلد
+      document
+        .getElementById("fieldModalConfirmBtn")
+        .addEventListener("click", () => {
+          applyFieldModalConfirm();
+        });
+
+      document
+        .getElementById("fieldModalCancelBtn")
+        .addEventListener("click", () => {
+          applyFieldModalCancel();
         });
 
       initApp().catch((e) => {
