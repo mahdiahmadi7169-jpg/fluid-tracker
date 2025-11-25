@@ -46,7 +46,7 @@
     button.danger { background: #d32f2f; }
     button:disabled { opacity: 0.5; cursor: default; }
 
-    input[type="date"], select {
+    input[type="date"], input[type="time"], select {
       padding: 6px 8px;
       border-radius: 6px;
       border: 1px solid #ccc;
@@ -103,8 +103,8 @@
     tr.active-row td { outline: 2px solid #0288d1; }
 
     /* رنگ ستون‌ها */
-    .input-header, .input-col { background-color: #d2f4ff; }
-    .output-header, .output-col { background-color: #fffafe; }
+    .input-header, .input-col { background-color: #d2f4ff; }  /* ورودی */
+    .output-header, .output-col { background-color: #F8B4DC; } /* خروجی (رنگ جدید) */
     .notes-header, .notes-col { background-color: #ecffef; }
 
     .save-col button {
@@ -132,9 +132,105 @@
       font-size: 13px;
     }
 
+    /* مودال ورود ردیف جدید */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px;
+      max-width: 900px;
+      width: 95%;
+      max-height: 90vh;
+      overflow: auto;
+      font-size: 13px;
+    }
+    .modal-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .field-box {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field-label {
+      font-weight: bold;
+      font-size: 12px;
+      text-align: center;
+    }
+    .field-box input, .field-box textarea {
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+      text-align: center;
+      font-family: Tahoma, sans-serif;
+    }
+    .field-box textarea {
+      resize: vertical;
+      min-height: 40px;
+      text-align: right;
+    }
+    .field-actions {
+      display: flex;
+      gap: 4px;
+      justify-content: space-between;
+    }
+    .mini-btn {
+      flex: 1;
+      padding: 4px 6px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .mini-btn.confirm { background: #1976d2; color: #fff; }
+    .mini-btn.cancel  { background: #b0bec5; color: #000; }
+
+    .modal-footer {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-footer-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .modal-footer-right {
+      display: flex;
+      gap: 8px;
+    }
+
     @media (max-width: 768px) {
       .layout { flex-direction: column; }
       .table-wrapper { max-height: 50vh; }
+      .field-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
     }
   </style>
 </head>
@@ -149,7 +245,7 @@
     </div>
 
     <div class="top-bar">
-      <button id="newRowBtn">شروع ردیف جدید</button>
+      <button id="newRowBtn">جدید چی داری بگی</button>
       <span>تاریخ گزارش روزانه:</span>
       <input type="date" id="reportDate" />
       <button id="refreshSummaryBtn" class="secondary">همگام‌سازی و به‌روزرسانی</button>
@@ -175,11 +271,117 @@
               <th class="output-header">کلستومی (cc)</th>
               <th class="output-header">استفراغ (cc)</th>
               <th class="notes-header">توضیحات</th>
-              <th class="save-col">ذخیره</th>
+              <th class="save-col">Save</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- مودال ورود ردیف جدید -->
+    <div class="modal" id="entryModal">
+      <div class="modal-content">
+        <div class="modal-title">ورود ردیف جدید</div>
+        <p style="font-size:12px; text-align:center;">
+          روی هر باکس مقدار را وارد کن، «تأیید» بزن تا ثبت شود. در پایان از دکمه «ذخیره» پایین استفاده کن.
+        </p>
+        <div class="field-grid">
+          <!-- 8 باکس اصلی -->
+          <div class="field-box" data-field="infusion_volume">
+            <div class="field-label">تزریق (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="oral_intake">
+            <div class="field-label">نوشیدنی (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="nephro_right">
+            <div class="field-label">نفرو راست (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="nephro_left">
+            <div class="field-label">نفرو چپ (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+
+          <div class="field-box" data-field="ileostomy">
+            <div class="field-label">ایلوستومی (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="colostomy">
+            <div class="field-label">کلستومی (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="vomiting">
+            <div class="field-label">استفراغ (cc)</div>
+            <input type="number" inputmode="decimal" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+          <div class="field-box" data-field="notes">
+            <div class="field-label">توضیحات (TEXT)</div>
+            <textarea></textarea>
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- نوع تزریق جداگانه -->
+        <div style="margin-top:10px;">
+          <div class="field-box" data-field="infusion_type">
+            <div class="field-label">نوع تزریق (TEXT)</div>
+            <input type="text" />
+            <div class="field-actions">
+              <button type="button" class="mini-btn confirm">تأیید</button>
+              <button type="button" class="mini-btn cancel">کنسل</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="modal-footer-left">
+            <span>تاریخ:</span>
+            <input type="date" id="modalDate" disabled />
+            <span>ساعت (24 ساعته):</span>
+            <input type="time" id="modalTime" dir="ltr" disabled />
+            <button type="button" id="editDateTimeBtn" class="secondary" style="font-size:12px;">
+              ویرایش تاریخ و ساعت
+            </button>
+          </div>
+          <div class="modal-footer-right">
+            <button type="button" id="modalSaveBtn">ذخیره</button>
+            <button type="button" id="modalCancelBtn" class="secondary">کنسل</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -211,47 +413,50 @@
 
   <script>
     // === ۱. تنظیم اتصال به Supabase ===
-    const supabaseUrl = "https://mmlvqmptvjeldxvkycrx.supabase.co";        // <-- این را با URL خودت عوض کن
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbHZxbXB0dmplbGR4dmt5Y3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTUwODUsImV4cCI6MjA3OTMzMTA4NX0.bU65ru6zNAryNQQgkxCAU2mA-zQiwZCuCkOIZek4HJo"; // <-- این را هم با anon key خودت
+    const supabaseUrl = "https://mmlvqmptvjeldxvkycrx.supabase.co";
+    const supabaseAnonKey =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbHZxbXB0dmplbGR4dmt5Y3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTUwODUsImV4cCI6MjA3OTMzMTA4NX0.bU65ru6zNAryNQQgkxCAU2mA-zQiwZCuCkOIZek4HJo";
 
     const supa = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    const STORAGE_USER_KEY = 'fluid_supabase_user_code_v1';
+    const STORAGE_USER_KEY = "fluid_supabase_user_code_v1";
     let currentUserCode = null;
     let entries = [];
     let currentEditingId = null;
     let trendChartInstance = null;
+    let draftEntry = null; // برای مودال
 
     const metricLabels = {
-      infusion_volume: 'تزریق (cc)',
-      oral_intake: 'نوشیدنی (cc)',
-      nephro_right: 'نفروستومی راست (cc)',
-      nephro_left: 'نفروستومی چپ (cc)',
-      ileostomy: 'ایلوستومی (cc)',
-      colostomy: 'کلستومی (cc)',
-      vomiting: 'استفراغ (cc)'
+      infusion_volume: "تزریق (cc)",
+      oral_intake: "نوشیدنی (cc)",
+      nephro_right: "نفروستومی راست (cc)",
+      nephro_left: "نفروستومی چپ (cc)",
+      ileostomy: "ایلوستومی (cc)",
+      colostomy: "کلستومی (cc)",
+      vomiting: "استفراغ (cc)",
     };
 
     function formatDateInput(d) {
       const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${day}`;
     }
 
     function formatTime(d) {
-      const h = String(d.getHours()).padStart(2, '0');
-      const m = String(d.getMinutes()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, "0");
+      const m = String(d.getMinutes()).padStart(2, "0");
       return `${h}:${m}`;
     }
 
     function deriveTimestamp(dateStr, timeStr) {
       if (!dateStr) return null;
-      const [y, m, d] = dateStr.split('-').map(Number);
+      const [y, m, d] = dateStr.split("-").map(Number);
       if (!y || !m || !d) return null;
-      let hh = 0, mm = 0;
-      if (timeStr && timeStr.includes(':')) {
-        [hh, mm] = timeStr.split(':').map(Number);
+      let hh = 0,
+        mm = 0;
+      if (timeStr && timeStr.includes(":")) {
+        [hh, mm] = timeStr.split(":").map(Number);
       }
       const dt = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
       return dt.getTime();
@@ -261,9 +466,14 @@
     function askUserCode() {
       let code = null;
       while (!code) {
-        const input = prompt("یک کد اختصاصی برای خودتان وارد کنید (مثلاً: farnaz-1404). این کد را روی تمام دستگاه‌ها یکسان وارد کنید:", "");
+        const input = prompt(
+          "یک کد اختصاصی برای خودتان وارد کنید (مثلاً: farnaz-1404). این کد را روی تمام دستگاه‌ها یکسان وارد کنید:",
+          ""
+        );
         if (input === null) {
-          alert("بدون کد کاربر، برنامه نمی‌تواند به دیتابیس مشترک وصل شود.");
+          alert(
+            "بدون کد کاربر، برنامه نمی‌تواند به دیتابیس مشترک وصل شود."
+          );
           continue;
         }
         const trimmed = input.trim();
@@ -279,7 +489,7 @@
     function setUserCode(code) {
       currentUserCode = code;
       localStorage.setItem(STORAGE_USER_KEY, code);
-      document.getElementById('userIdLabel').textContent = code;
+      document.getElementById("userIdLabel").textContent = code;
     }
 
     function getOrInitUserCode() {
@@ -288,19 +498,21 @@
       setUserCode(code);
     }
 
-    // --- ارتباط با جدول entries در Supabase ---
+    // --- ارتباط با Supabase ---
 
     async function loadEntriesFromServer() {
       if (!currentUserCode) return [];
       const { data, error } = await supa
-        .from('entries')
-        .select('*')
-        .eq('user_code', currentUserCode)
-        .order('timestamp', { ascending: true });
+        .from("entries")
+        .select("*")
+        .eq("user_code", currentUserCode)
+        .order("timestamp", { ascending: true });
 
       if (error) {
         console.error(error);
-        alert("خطا در خواندن داده از Supabase (اینترنت یا تنظیمات پروژه را چک کنید).");
+        alert(
+          "خطا در خواندن داده از Supabase (اینترنت یا تنظیمات پروژه را چک کنید)."
+        );
         return [];
       }
       return data || [];
@@ -311,9 +523,9 @@
         alert("کد کاربر تنظیم نشده است.");
         return;
       }
-      const { error } = await supa
-        .from('entries')
-        .upsert(entry, { onConflict: 'id' });
+      const { error } = await supa.from("entries").upsert(entry, {
+        onConflict: "id",
+      });
 
       if (error) {
         console.error(error);
@@ -321,141 +533,133 @@
       }
     }
 
-    // --- مدیریت جدول روی صفحه ---
+    // --- جدول ---
 
     function renderTable() {
-      const tbody = document.querySelector('#entriesTable tbody');
-      tbody.innerHTML = '';
+      const tbody = document.querySelector("#entriesTable tbody");
+      tbody.innerHTML = "";
 
-      const sorted = [...entries].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      const sorted = [...entries].sort(
+        (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+      );
       for (const e of sorted) {
-        const tr = document.createElement('tr');
+        const tr = document.createElement("tr");
         tr.dataset.id = String(e.id);
 
         function addCell(field, value) {
-          const td = document.createElement('td');
+          const td = document.createElement("td");
           td.dataset.field = field;
-          if (['infusion_volume','oral_intake'].includes(field)) {
-            td.classList.add('input-col');
+
+          if (["infusion_volume", "oral_intake"].includes(field)) {
+            td.classList.add("input-col");
           }
-          if (['nephro_right','nephro_left','ileostomy','colostomy','vomiting'].includes(field)) {
-            td.classList.add('output-col');
+          if (
+            [
+              "nephro_right",
+              "nephro_left",
+              "ileostomy",
+              "colostomy",
+              "vomiting",
+            ].includes(field)
+          ) {
+            td.classList.add("output-col");
           }
-          if (field === 'notes') {
-            td.classList.add('notes-col');
+          if (field === "notes") {
+            td.classList.add("notes-col");
           }
-          if (field === 'save') {
-            td.classList.add('save-col');
-            const btn = document.createElement('button');
-            btn.textContent = 'Save';
+          if (field === "save") {
+            td.classList.add("save-col");
+            const btn = document.createElement("button");
+            btn.textContent = "Save";
             td.appendChild(btn);
           } else {
-            td.textContent = (value !== null && value !== undefined && value !== '') ? value : '';
+            td.textContent =
+              value !== null && value !== undefined && value !== ""
+                ? value
+                : "";
           }
           tr.appendChild(td);
         }
 
-        addCell('date', e.date || '');
-        addCell('time', e.time || '');
-        addCell('infusion_volume', e.infusion_volume ?? '');
-        addCell('infusion_type', e.infusion_type ?? '');
-        addCell('oral_intake', e.oral_intake ?? '');
-        addCell('nephro_right', e.nephro_right ?? '');
-        addCell('nephro_left', e.nephro_left ?? '');
-        addCell('ileostomy', e.ileostomy ?? '');
-        addCell('colostomy', e.colostomy ?? '');
-        addCell('vomiting', e.vomiting ?? '');
-        addCell('notes', e.notes ?? '');
-        addCell('save', '');
+        addCell("date", e.date || "");
+        addCell("time", e.time || "");
+        addCell("infusion_volume", e.infusion_volume ?? "");
+        addCell("infusion_type", e.infusion_type ?? "");
+        addCell("oral_intake", e.oral_intake ?? "");
+        addCell("nephro_right", e.nephro_right ?? "");
+        addCell("nephro_left", e.nephro_left ?? "");
+        addCell("ileostomy", e.ileostomy ?? "");
+        addCell("colostomy", e.colostomy ?? "");
+        addCell("vomiting", e.vomiting ?? "");
+        addCell("notes", e.notes ?? "");
+        addCell("save", "");
 
         tbody.appendChild(tr);
       }
       highlightActiveRow();
     }
 
-    function setCurrentEditingId(id) {
-      currentEditingId = id;
-      updateCurrentRowLabel();
-    }
-
-    function updateCurrentRowLabel() {
-      const label = document.getElementById('summaryText'); // فقط برای وضعیت از بالا استفاده نمی‌کنیم
-      highlightActiveRow();
-    }
-
     function highlightActiveRow() {
-      const rows = document.querySelectorAll('#entriesTable tbody tr');
-      rows.forEach(tr => {
+      const rows = document.querySelectorAll("#entriesTable tbody tr");
+      rows.forEach((tr) => {
         const id = Number(tr.dataset.id);
         if (currentEditingId && id === currentEditingId) {
-          tr.classList.add('active-row');
+          tr.classList.add("active-row");
         } else {
-          tr.classList.remove('active-row');
+          tr.classList.remove("active-row");
         }
       });
     }
 
-    async function addNewRow() {
-      if (!currentUserCode) {
-        alert("اول کد کاربر را تنظیم کنید.");
-        return;
-      }
-      const now = new Date();
-      const dateStr = formatDateInput(now);
-      const timeStr = formatTime(now);
-
-      const entry = {
-        id: Date.now(), // چون ستون identity هم داری، اگر خواستی می‌توانیم عوض کنیم
-        user_code: currentUserCode,
-        timestamp: now.getTime(),
-        date: dateStr,
-        time: timeStr,
-        infusion_volume: null,
-        infusion_type: null,
-        oral_intake: null,
-        nephro_right: null,
-        nephro_left: null,
-        ileostomy: null,
-        colostomy: null,
-        vomiting: null,
-        notes: null
-      };
-
-      entries.push(entry);
-      renderTable();
-      setCurrentEditingId(entry.id);
-      updateSummaryForSelectedDate();
-
-      await saveEntryToServer(entry);
-    }
-
     async function editField(entryId, field) {
-      const entry = entries.find(e => e.id === entryId);
+      const entry = entries.find((e) => e.id === entryId);
       if (!entry) return;
 
-      if (field === 'date') {
-        const val = prompt('تاریخ (فرمت YYYY-MM-DD، مثلا 2025-11-22):', entry.date || '');
+      if (field === "date") {
+        const val = prompt(
+          "تاریخ (فرمت YYYY-MM-DD، مثلا 2025-11-22):",
+          entry.date || ""
+        );
         if (val === null) return;
         entry.date = val.trim();
-      } else if (field === 'time') {
-        const val = prompt('ساعت (فرمت HH:MM، مثلا 14:30):', entry.time || '');
+      } else if (field === "time") {
+        const val = prompt(
+          "ساعت (فرمت HH:MM، مثلا 14:30):",
+          entry.time || ""
+        );
         if (val === null) return;
         entry.time = val.trim();
-      } else if (field === 'infusion_type' || field === 'notes') {
-        const val = prompt(field === 'infusion_type' ? 'نوع تزریق:' : 'توضیحات:', entry[field] || '');
+      } else if (field === "infusion_type" || field === "notes") {
+        const val = prompt(
+          field === "infusion_type" ? "نوع تزریق:" : "توضیحات:",
+          entry[field] || ""
+        );
         if (val === null) return;
         entry[field] = val.trim() || null;
-      } else if (['infusion_volume','oral_intake','nephro_right','nephro_left','ileostomy','colostomy','vomiting'].includes(field)) {
-        const oldVal = entry[field] != null ? String(entry[field]) : '';
-        const val = prompt('مقدار به cc (فقط عدد، خالی = حذف):', oldVal);
+      } else if (
+        [
+          "infusion_volume",
+          "oral_intake",
+          "nephro_right",
+          "nephro_left",
+          "ileostomy",
+          "colostomy",
+          "vomiting",
+        ].includes(field)
+      ) {
+        const oldVal = entry[field] != null ? String(entry[field]) : "";
+        const val = prompt(
+          "مقدار به cc (فقط عدد، خالی = حذف):",
+          oldVal
+        );
         if (val === null) return;
         const t = val.trim();
-        if (t === '') {
+        if (t === "") {
           entry[field] = null;
         } else {
           const num = Number(t);
           if (Number.isNaN(num)) {
-            alert('مقدار وارد شده عدد نیست.');
+            alert("مقدار وارد شده عدد نیست.");
             return;
           }
           entry[field] = num;
@@ -475,19 +679,22 @@
     // --- خلاصه روزانه ---
 
     function calculateSummaryForDate(dateStr) {
-      const dayEntries = entries.filter(e => e.date === dateStr);
+      const dayEntries = entries.filter((e) => e.date === dateStr);
 
       const sum = (field) =>
-        dayEntries.reduce((acc, e) => acc + (Number(e[field]) || 0), 0);
+        dayEntries.reduce(
+          (acc, e) => acc + (Number(e[field]) || 0),
+          0
+        );
 
       const res = {
-        infusionTotal: sum('infusion_volume'),
-        oralTotal: sum('oral_intake'),
-        nephroRightTotal: sum('nephro_right'),
-        nephroLeftTotal: sum('nephro_left'),
-        ileostomyTotal: sum('ileostomy'),
-        colostomyTotal: sum('colostomy'),
-        vomitingTotal: sum('vomiting')
+        infusionTotal: sum("infusion_volume"),
+        oralTotal: sum("oral_intake"),
+        nephroRightTotal: sum("nephro_right"),
+        nephroLeftTotal: sum("nephro_left"),
+        ileostomyTotal: sum("ileostomy"),
+        colostomyTotal: sum("colostomy"),
+        vomitingTotal: sum("vomiting"),
       };
       res.inputTotal = res.infusionTotal + res.oralTotal;
       res.outputTotal =
@@ -503,66 +710,67 @@
     function buildSummaryText(summary, dateStr) {
       return [
         `تاریخ گزارش: ${dateStr}`,
-        '',
-        'ورودی‌ها:',
+        "",
+        "ورودی‌ها:",
         `- تزریق: ${summary.infusionTotal} cc`,
         `- نوشیدنی: ${summary.oralTotal} cc`,
         `مجموع ورودی: ${summary.inputTotal} cc`,
-        '',
-        'خروجی‌ها:',
+        "",
+        "خروجی‌ها:",
         `- نفروستومی راست: ${summary.nephroRightTotal} cc`,
         `- نفروستومی چپ: ${summary.nephroLeftTotal} cc`,
         `- ایلوستومی: ${summary.ileostomyTotal} cc`,
         `- کلستومی: ${summary.colostomyTotal} cc`,
         `- استفراغ: ${summary.vomitingTotal} cc`,
         `مجموع خروجی: ${summary.outputTotal} cc`,
-        '',
-        `تراز مایع (ورودی - خروجی): ${summary.netBalance} cc`
-      ].join('\n');
+        "",
+        `تراز مایع (ورودی - خروجی): ${summary.netBalance} cc`,
+      ].join("\n");
     }
 
     function updateSummaryForSelectedDate() {
-      const dateInput = document.getElementById('reportDate');
+      const dateInput = document.getElementById("reportDate");
       const dateStr = dateInput.value;
-      const summaryEl = document.getElementById('summaryText');
+      const summaryEl = document.getElementById("summaryText");
       if (!dateStr) {
-        summaryEl.textContent = 'لطفاً تاریخ گزارش را انتخاب کنید.';
+        summaryEl.textContent = "لطفاً تاریخ گزارش را انتخاب کنید.";
         return;
       }
       const summary = calculateSummaryForDate(dateStr);
       summaryEl.textContent = buildSummaryText(summary, dateStr);
     }
 
-    // --- نمودار ترند ---
+    // --- نمودار ---
 
     async function drawTrendChart() {
       if (!currentUserCode) {
         alert("اول کد کاربر را تنظیم کنید.");
         return;
       }
-      const fromDate = document.getElementById('chartFromDate').value;
-      const toDate = document.getElementById('chartToDate').value;
-      const metric = document.getElementById('chartMetric').value;
+      const fromDate = document.getElementById("chartFromDate").value;
+      const toDate = document.getElementById("chartToDate").value;
+      const metric = document.getElementById("chartMetric").value;
 
       if (!fromDate || !toDate) {
-        alert('لطفاً هر دو تاریخ «از» و «تا» را وارد کنید.');
+        alert("لطفاً هر دو تاریخ «از» و «تا» را وارد کنید.");
         return;
       }
       if (fromDate > toDate) {
-        alert('تاریخ شروع نباید بعد از تاریخ پایان باشد.');
+        alert("تاریخ شروع نباید بعد از تاریخ پایان باشد.");
         return;
       }
 
       entries = await loadEntriesFromServer();
 
-      const filtered = entries.filter(e =>
-        e.date &&
-        e.date >= fromDate &&
-        e.date <= toDate
+      const filtered = entries.filter(
+        (e) =>
+          e.date &&
+          e.date >= fromDate &&
+          e.date <= toDate
       );
 
       if (filtered.length === 0) {
-        alert('در این بازه‌ی زمانی داده‌ای ثبت نشده است.');
+        alert("در این بازه‌ی زمانی داده‌ای ثبت نشده است.");
         return;
       }
 
@@ -574,20 +782,24 @@
       }
 
       const dates = Array.from(map.keys()).sort();
-      const data = dates.map(d => map.get(d));
+      const data = dates.map((d) => map.get(d));
 
-      const ctx = document.getElementById('trendChart').getContext('2d');
+      const ctx = document
+        .getElementById("trendChart")
+        .getContext("2d");
       if (trendChartInstance) trendChartInstance.destroy();
 
       trendChartInstance = new Chart(ctx, {
-        type: 'line',
+        type: "line",
         data: {
           labels: dates,
-          datasets: [{
-            label: metricLabels[metric] || metric,
-            data: data,
-            tension: 0.3
-          }]
+          datasets: [
+            {
+              label: metricLabels[metric] || metric,
+              data: data,
+              tension: 0.3,
+            },
+          ],
         },
         options: {
           responsive: true,
@@ -595,19 +807,176 @@
             legend: { display: true },
             tooltip: {
               callbacks: {
-                label: (context) => `${context.parsed.y} cc`
-              }
-            }
+                label: (context) => `${context.parsed.y} cc`,
+              },
+            },
           },
           scales: {
-            x: { title: { display: true, text: 'تاریخ' } },
+            x: { title: { display: true, text: "تاریخ" } },
             y: {
-              title: { display: true, text: 'مقدار (cc)' },
-              beginAtZero: true
-            }
-          }
-        }
+              title: { display: true, text: "مقدار (cc)" },
+              beginAtZero: true,
+            },
+          },
+        },
       });
+    }
+
+    // --- مودال ردیف جدید ---
+
+    const entryModal = document.getElementById("entryModal");
+    const modalDateInput = document.getElementById("modalDate");
+    const modalTimeInput = document.getElementById("modalTime");
+
+    function resetModalFields() {
+      document
+        .querySelectorAll("#entryModal .field-box")
+        .forEach((box) => {
+          const inp =
+            box.querySelector("input") ||
+            box.querySelector("textarea");
+          if (inp) inp.value = "";
+        });
+    }
+
+    function openEntryModal() {
+      resetModalFields();
+      // تاریخ / ساعت اولیه
+      const now = new Date();
+      const dateStr = formatDateInput(now);
+      const timeStr = formatTime(now);
+      modalDateInput.value = dateStr;
+      modalTimeInput.value = timeStr;
+      modalDateInput.disabled = true;
+      modalTimeInput.disabled = true;
+      document.getElementById("editDateTimeBtn").textContent =
+        "ویرایش تاریخ و ساعت";
+
+      entryModal.classList.add("show");
+    }
+
+    function closeEntryModal() {
+      entryModal.classList.remove("show");
+      draftEntry = null;
+    }
+
+    function startNewRow() {
+      if (!currentUserCode) {
+        alert("اول کد کاربر را تنظیم کنید.");
+        return;
+      }
+      const now = new Date();
+      const dateStr = formatDateInput(now);
+      const timeStr = formatTime(now);
+
+      draftEntry = {
+        id: Date.now(), // آی‌دی موقتی، یکتا
+        user_code: currentUserCode,
+        timestamp: now.getTime(),
+        date: dateStr,
+        time: timeStr,
+        infusion_volume: null,
+        infusion_type: null,
+        oral_intake: null,
+        nephro_right: null,
+        nephro_left: null,
+        ileostomy: null,
+        colostomy: null,
+        vomiting: null,
+        notes: null,
+      };
+
+      openEntryModal();
+    }
+
+    function handleFieldConfirm(field, inputEl) {
+      if (!draftEntry) return;
+      const raw = inputEl.value.trim();
+
+      if (field === "notes" || field === "infusion_type") {
+        draftEntry[field] = raw || null;
+        return;
+      }
+
+      // بقیه باید عدد باشند
+      if (raw === "") {
+        draftEntry[field] = null;
+        return;
+      }
+      const num = Number(raw);
+      if (Number.isNaN(num)) {
+        alert("فقط عدد مجاز است.");
+        return;
+      }
+      draftEntry[field] = num;
+
+      if (
+        field === "infusion_volume" &&
+        draftEntry.infusion_volume !== null &&
+        (!draftEntry.infusion_type ||
+          draftEntry.infusion_type.trim() === "")
+      ) {
+        alert("برای تزریق، نوع تزریق را هم وارد کنید.");
+        const itBox = document.querySelector(
+          '.field-box[data-field="infusion_type"] input'
+        );
+        if (itBox) itBox.focus();
+      }
+    }
+
+    async function saveDraftEntry() {
+      if (!draftEntry) return;
+
+      const dateStr = modalDateInput.value;
+      const timeStr = modalTimeInput.value;
+
+      if (!dateStr) {
+        alert("تاریخ را وارد کنید.");
+        return;
+      }
+
+      draftEntry.date = dateStr;
+      draftEntry.time = timeStr || draftEntry.time;
+      const ts = deriveTimestamp(draftEntry.date, draftEntry.time);
+      if (ts) draftEntry.timestamp = ts;
+
+      const anyValue = [
+        "infusion_volume",
+        "oral_intake",
+        "nephro_right",
+        "nephro_left",
+        "ileostomy",
+        "colostomy",
+        "vomiting",
+        "notes",
+      ].some(
+        (f) =>
+          draftEntry[f] !== null &&
+          draftEntry[f] !== "" &&
+          draftEntry[f] !== undefined
+      );
+
+      if (!anyValue) {
+        const ok = confirm(
+          "هیچ مقداری وارد نشده. ردیف خالی ذخیره شود؟"
+        );
+        if (!ok) return;
+      }
+
+      if (
+        draftEntry.infusion_volume !== null &&
+        (!draftEntry.infusion_type ||
+          draftEntry.infusion_type.trim() === "")
+      ) {
+        alert("نوع تزریق را هم وارد کنید.");
+        return;
+      }
+
+      entries.push(draftEntry);
+      await saveEntryToServer(draftEntry);
+      renderTable();
+      updateSummaryForSelectedDate();
+      closeEntryModal();
     }
 
     // --- init ---
@@ -615,12 +984,15 @@
     async function initApp() {
       const today = new Date();
       const todayStr = formatDateInput(today);
-      const reportDateInput = document.getElementById('reportDate');
+      const reportDateInput = document.getElementById("reportDate");
       reportDateInput.value = todayStr;
 
-      const chartFromInput = document.getElementById('chartFromDate');
-      const chartToInput = document.getElementById('chartToDate');
-      const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const chartFromInput =
+        document.getElementById("chartFromDate");
+      const chartToInput = document.getElementById("chartToDate");
+      const weekAgo = new Date(
+        today.getTime() - 6 * 24 * 60 * 60 * 1000
+      );
       chartToInput.value = todayStr;
       chartFromInput.value = formatDateInput(weekAgo);
 
@@ -631,24 +1003,32 @@
       updateSummaryForSelectedDate();
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('newRowBtn').addEventListener('click', () => {
-        addNewRow().catch(console.error);
-      });
+    document.addEventListener("DOMContentLoaded", () => {
+      document
+        .getElementById("newRowBtn")
+        .addEventListener("click", () => {
+          startNewRow();
+        });
 
-      document.getElementById('refreshSummaryBtn').addEventListener('click', async () => {
-        entries = await loadEntriesFromServer();
-        renderTable();
-        updateSummaryForSelectedDate();
-      });
+      document
+        .getElementById("refreshSummaryBtn")
+        .addEventListener("click", async () => {
+          entries = await loadEntriesFromServer();
+          renderTable();
+          updateSummaryForSelectedDate();
+        });
 
-      document.getElementById('drawChartBtn').addEventListener('click', () => {
-        drawTrendChart().catch(console.error);
-      });
+      document
+        .getElementById("drawChartBtn")
+        .addEventListener("click", () => {
+          drawTrendChart().catch(console.error);
+        });
 
-      const tbody = document.querySelector('#entriesTable tbody');
-      tbody.addEventListener('click', (e) => {
-        const td = e.target.closest('td');
+      const tbody = document.querySelector(
+        "#entriesTable tbody"
+      );
+      tbody.addEventListener("click", (e) => {
+        const td = e.target.closest("td");
         if (!td) return;
         const tr = td.parentElement;
         const id = Number(tr.dataset.id);
@@ -656,8 +1036,8 @@
 
         const field = td.dataset.field;
 
-        // اگر روی ستون ذخیره زد، فقط ردیف را از حالت فعال خارج کن
-        if (field === 'save') {
+        if (field === "save") {
+          // فقط ردیف فعال را خالی می‌کنیم
           currentEditingId = null;
           highlightActiveRow();
           return;
@@ -670,26 +1050,91 @@
         }
       });
 
-      document.getElementById('changeUserBtn').addEventListener('click', async () => {
-        const input = prompt(
-          "کد جدید کاربر را وارد کنید (همان کدی که در دستگاه‌های دیگر هم استفاده می‌کنید):",
-          currentUserCode || ""
-        );
-        if (input === null) return;
-        const trimmed = input.trim();
-        if (!trimmed) {
-          alert("کد نباید خالی باشد.");
-          return;
-        }
-        setUserCode(trimmed);
-        entries = await loadEntriesFromServer();
-        renderTable();
-        updateSummaryForSelectedDate();
-      });
+      document
+        .getElementById("changeUserBtn")
+        .addEventListener("click", async () => {
+          const input = prompt(
+            "کد جدید کاربر را وارد کنید (همان کدی که در دستگاه‌های دیگر هم استفاده می‌کنید):",
+            currentUserCode || ""
+          );
+          if (input === null) return;
+          const trimmed = input.trim();
+          if (!trimmed) {
+            alert("کد نباید خالی باشد.");
+            return;
+          }
+          setUserCode(trimmed);
+          entries = await loadEntriesFromServer();
+          renderTable();
+          updateSummaryForSelectedDate();
+        });
 
-      initApp().catch(e => {
+      // دکمه‌های داخل مودال
+      document
+        .querySelectorAll("#entryModal .field-box")
+        .forEach((box) => {
+          const field = box.dataset.field;
+          const inputEl =
+            box.querySelector("input") ||
+            box.querySelector("textarea");
+          const confirmBtn = box.querySelector(
+            ".mini-btn.confirm"
+          );
+          const cancelBtn = box.querySelector(
+            ".mini-btn.cancel"
+          );
+
+          if (confirmBtn) {
+            confirmBtn.addEventListener("click", () =>
+              handleFieldConfirm(field, inputEl)
+            );
+          }
+          if (cancelBtn) {
+            cancelBtn.addEventListener("click", () => {
+              if (inputEl) inputEl.value = "";
+              if (!draftEntry) return;
+              if (field === "notes" || field === "infusion_type") {
+                draftEntry[field] = null;
+              } else {
+                draftEntry[field] = null;
+              }
+            });
+          }
+        });
+
+      document
+        .getElementById("editDateTimeBtn")
+        .addEventListener("click", () => {
+          const disabled = modalDateInput.disabled;
+          modalDateInput.disabled = !disabled;
+          modalTimeInput.disabled = !disabled;
+          document.getElementById(
+            "editDateTimeBtn"
+          ).textContent = disabled
+            ? "قفل کردن تاریخ و ساعت"
+            : "ویرایش تاریخ و ساعت";
+        });
+
+      document
+        .getElementById("modalSaveBtn")
+        .addEventListener("click", () => {
+          saveDraftEntry().catch(console.error);
+        });
+
+      document
+        .getElementById("modalCancelBtn")
+        .addEventListener("click", () => {
+          const ok = confirm(
+            "آیا مطمئن هستید که می‌خواهید بدون ذخیره از این پنجره خارج شوید؟"
+          );
+          if (ok) closeEntryModal();
+        });
+
+      initApp().catch((e) => {
         console.error(e);
-        alert("خطا در راه‌اندازی برنامه (تنظیمات Supabase را چک کنید).");
+        alert(
+          "خطا در راه‌اندازی برنامه (تنظیمات Supabase را چک کنید)."
+        );
       });
     });
   </script>
