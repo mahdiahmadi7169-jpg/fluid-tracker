@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -281,7 +281,7 @@
     </div>
 
     <!-- مودال اصلی ورود ردیف جدید -->
-    <div id="entryModalOverlay" class="modal-overlay hidden">
+    <div id="entryModalOverlay" class="modal-overlay hidden" style="display:none;">
       <div class="modal">
         <h3>ثبت ردیف جدید</h3>
         <div class="modal-datetime">
@@ -314,7 +314,7 @@
     </div>
 
     <!-- مودال ویرایش یک فیلد -->
-    <div id="fieldModalOverlay" class="modal-overlay hidden">
+    <div id="fieldModalOverlay" class="modal-overlay hidden" style="display:none;">
       <div class="modal small">
         <h3 id="fieldModalTitle">ویرایش</h3>
         <div class="modal-field-body">
@@ -366,8 +366,8 @@
     let entries = [];
     let currentEditingId = null;
     let trendChartInstance = null;
-    let draftEntry = null; // برای مودال ردیف جدید
-    let currentFieldKey = null; // برای مودال ویرایش فیلد
+    let draftEntry = null;
+    let currentFieldKey = null;
 
     const fieldTitles = {
       infusion_volume: "تزریق (cc)",
@@ -676,7 +676,6 @@
       const textEl = document.getElementById("hydrationText");
       if (!box || !textEl) return;
 
-      // اگر قبلاً بسته شده باشد، در همین بار نمایش نده
       if (window._hydrationDismissed) {
         box.style.display = "none";
         return;
@@ -698,11 +697,8 @@
         messages.push("بچه مایعات بخور ، عقب هستیا! 🥤");
       } else if (todayNet > 0) {
         messages.push("آفرییییین 👏 مایعات جلو هستی!");
-      } else {
-        // اگر صفر بود، فعلاً پیام نده که تو ذوقت نخوره
       }
 
-      // سه روز قبل
       let negativeDays = 0;
       for (let i = 1; i <= 3; i++) {
         const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
@@ -854,11 +850,13 @@
 
       refreshModalFieldButtons();
       entryModal.classList.remove("hidden");
+      entryModal.style.display = "flex";
     }
 
     function closeEntryModal(discard) {
       if (discard) draftEntry = null;
       entryModal.classList.add("hidden");
+      entryModal.style.display = "none";
     }
 
     // --- مودال ویرایش فیلد ---
@@ -884,11 +882,13 @@
       fieldModalInput.value =
         curVal !== null && curVal !== undefined ? curVal : "";
       fieldModalOverlay.classList.remove("hidden");
+      fieldModalOverlay.style.display = "flex";
       fieldModalInput.focus();
     }
 
     function closeFieldModal() {
       fieldModalOverlay.classList.add("hidden");
+      fieldModalOverlay.style.display = "none";
       currentFieldKey = null;
     }
 
@@ -918,17 +918,13 @@
       const justField = currentFieldKey;
       closeFieldModal();
 
-      // اگر تزریق مقدار گرفت، بعدش نوع تزریق را بپرس
       if (justField === "infusion_volume" && draftEntry.infusion_volume != null) {
         openFieldModal("infusion_type");
       }
     }
 
     function applyFieldModalCancel() {
-      // مهم‌ترین بخش: اول پنجره را ببند
       closeFieldModal();
-
-      // سپس تلاش کن مقدار را پاک و متن دکمه‌ها را به‌روز کنی
       try {
         if (draftEntry && currentFieldKey) {
           draftEntry[currentFieldKey] = null;
@@ -960,6 +956,14 @@
 
     // --- init ---
     async function initApp() {
+      // اطمینان از بسته بودن مودال‌ها در شروع
+      entryModal.classList.add("hidden");
+      entryModal.style.display = "none";
+      fieldModalOverlay.classList.add("hidden");
+      fieldModalOverlay.style.display = "none";
+      draftEntry = null;
+      currentFieldKey = null;
+
       const today = new Date();
       const todayStr = formatDateInput(today);
       const reportDateInput = document.getElementById("reportDate");
@@ -980,6 +984,12 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      // مطمئن شو در لود اولیه مودال‌ها بسته‌اند
+      entryModal.classList.add("hidden");
+      entryModal.style.display = "none";
+      fieldModalOverlay.classList.add("hidden");
+      fieldModalOverlay.style.display = "none";
+
       document.getElementById("newRowBtn").addEventListener("click", () => {
         openEntryModal();
       });
@@ -1083,7 +1093,7 @@
       // بستن پیام مایعات
       const closeHydrationBtn = document.getElementById("closeHydrationBtn");
       if (closeHydrationBtn) {
-        closeHydrationBtn.addEventListener("click", () => {id=""
+        closeHydrationBtn.addEventListener("click", () => {
           window._hydrationDismissed = true;
           const box = document.getElementById("hydrationMessage");
           if (box) box.style.display = "none";
