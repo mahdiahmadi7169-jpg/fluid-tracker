@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -241,7 +241,7 @@
     </div>
 
     <div class="top-bar">
-      <!-- این دکمه حالا مستقیم تابع global را صدا می‌زند -->
+      <!-- دکمه با onclick برای موبایل و دسکتاپ -->
       <button id="newRowBtn" onclick="openEntryModalFromButton()">جدید چی داری بگی</button>
       <span>تاریخ گزارش روزانه:</span>
       <input type="date" id="reportDate" />
@@ -288,7 +288,9 @@
         <div class="modal-datetime">
           <span>تاریخ: <span id="modalDateText"></span></span>
           <span>ساعت: <span id="modalTimeText"></span></span>
-          <button id="editDateTimeBtn" class="secondary">ویرایش تاریخ و ساعت</button>
+          <button id="editDateTimeBtn" class="secondary" onclick="toggleDateTimeEditors()">
+            ویرایش تاریخ و ساعت
+          </button>
         </div>
         <div id="modalDateTimeEditors" class="modal-datetime-edit hidden">
           <input type="date" id="modalDateInput" />
@@ -870,6 +872,13 @@
       entryModal.style.display = "none";
     }
 
+    // --- باز و بسته کردن ادیت تاریخ/ساعت (global برای onclick) ---
+    function toggleDateTimeEditors() {
+      const box = document.getElementById("modalDateTimeEditors");
+      if (!box) return;
+      box.classList.toggle("hidden");
+    }
+
     // --- مودال ویرایش فیلد ---
     const fieldModalOverlay = document.getElementById("fieldModalOverlay");
     const fieldModalTitle = document.getElementById("fieldModalTitle");
@@ -1054,12 +1063,7 @@
         checkHydrationStatus();
       });
 
-      // مودال ردیف جدید
-      document.getElementById("editDateTimeBtn").addEventListener("click", () => {
-        const box = document.getElementById("modalDateTimeEditors");
-        box.classList.toggle("hidden");
-      });
-
+      // دکمه‌های داخل مودال ردیف جدید
       document
         .querySelectorAll("#entryModalOverlay .modal-grid button")
         .forEach((btn) => {
