@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -67,6 +67,41 @@
       margin: 0;
     }
 
+    .ai-card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .ai-card h3 {
+      margin: 0 0 8px 0;
+      text-align: right;
+    }
+    .ai-note {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 6px;
+    }
+    .ai-card textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: Tahoma, sans-serif;
+      resize: vertical;
+    }
+    .ai-answer {
+      margin-top: 8px;
+      background: #fafafa;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: Tahoma, monospace;
+      white-space: pre-wrap;
+    }
+
     .layout {
       display: flex;
       flex-wrap: wrap;
@@ -110,12 +145,26 @@
     .output-header, .output-col { background-color: #F8B4DC; } /* خروجی */
     .notes-header, .notes-col { background-color: #ecffef; }   /* توضیحات */
 
+    .save-col {
+      min-width: 90px;
+    }
+    .save-col-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .save-col button {
       width: 100%;
       padding: 4px 6px;
       font-size: 11px;
       border-radius: 4px;
+    }
+    .row-save-btn {
       background: #00897b;
+      color: #fff;
+    }
+    .row-delete-btn {
+      background: #d32f2f;
       color: #fff;
     }
 
@@ -257,6 +306,22 @@
       </div>
     </div>
 
+    <!-- باکس تحلیل هوشمند -->
+    <div class="ai-card">
+      <h3>تحلیل هوشمند (نمونه)</h3>
+      <div class="ai-note">
+        این بخش صرفاً برای توضیح و آموزش است و جایگزین پزشک شما نیست.
+        <br />
+        برای اتصال واقعی به هوش مصنوعی، باید از یک سرور امن و API رسمی استفاده شود.
+      </div>
+      <textarea id="aiQuestion" placeholder="سوالت را اینجا بنویس؛ مثلا: &quot;با توجه به ورودی و خروجی این سه روز، وضعیت مایعات من چطوره؟&quot;"></textarea>
+      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button id="aiAskBtn">تحلیل کن (Thinking)</button>
+        <span id="aiStatus" style="font-size:12px;color:#777;"></span>
+      </div>
+      <pre id="aiAnswer" class="ai-answer"></pre>
+    </div>
+
     <div class="layout">
       <div class="table-wrapper">
         <table id="entriesTable">
@@ -273,12 +338,17 @@
               <th class="output-header">کلستومی (cc)</th>
               <th class="output-header">استفراغ (cc)</th>
               <th class="notes-header">توضیحات</th>
-              <th class="save-col">Save</th>
+              <th class="save-col">عملیات</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- دکمه خروجی اکسل زیر جدول -->
+    <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+      <button id="exportExcelBtn" class="secondary">خروجی اکسل</button>
     </div>
 
     <!-- مودال اصلی ورود ردیف جدید -->
@@ -326,6 +396,19 @@
         <div class="modal-footer">
           <button id="fieldModalConfirmBtn">تأیید</button>
           <button id="fieldModalCancelBtn" class="secondary">انصراف</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- مودال پاپ‌آپ وضعیت مایعات -->
+    <div id="hydrationPopupOverlay" class="modal-overlay hidden" style="display:none;">
+      <div class="modal small">
+        <h3>وضعیت مایعات</h3>
+        <div style="font-size:13px; margin-bottom:10px;">
+          <span id="hydrationPopupText"></span>
+        </div>
+        <div class="modal-footer" style="justify-content:center;">
+          <button id="hydrationPopupOkBtn">خب</button>
         </div>
       </div>
     </div>
@@ -485,6 +568,18 @@
       }
     }
 
+    async function deleteEntryFromServer(id) {
+      if (!id) return;
+      const { error } = await supa
+        .from("entries")
+        .delete()
+        .eq("id", id);
+      if (error) {
+        console.error(error);
+        alert("خطا در حذف از Supabase.");
+      }
+    }
+
     // --- جدول اصلی ---
     function renderTable() {
       const tbody = document.querySelector("#entriesTable tbody");
@@ -515,9 +610,20 @@
           }
           if (field === "save") {
             td.classList.add("save-col");
-            const btn = document.createElement("button");
-            btn.textContent = "Save";
-            td.appendChild(btn);
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("save-col-buttons");
+
+            const saveBtn = document.createElement("button");
+            saveBtn.textContent = "Save";
+            saveBtn.classList.add("row-save-btn");
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "حذف";
+            delBtn.classList.add("row-delete-btn");
+
+            wrapper.appendChild(saveBtn);
+            wrapper.appendChild(delBtn);
+            td.appendChild(wrapper);
           } else {
             td.textContent =
               value !== null && value !== undefined && value !== ""
@@ -673,19 +779,21 @@
       summaryEl.textContent = buildSummaryText(summary, dateStr);
     }
 
-    // --- پیام وضعیت مایعات ---
+    // --- پیام وضعیت مایعات + پاپ‌آپ ---
     function checkHydrationStatus() {
       const box = document.getElementById("hydrationMessage");
       const textEl = document.getElementById("hydrationText");
-      if (!box || !textEl) return;
+      const popupOverlay = document.getElementById("hydrationPopupOverlay");
+      const popupText = document.getElementById("hydrationPopupText");
 
-      if (window._hydrationDismissed) {
-        box.style.display = "none";
-        return;
-      }
+      if (!box || !textEl) return;
 
       if (!entries || entries.length === 0) {
         box.style.display = "none";
+        if (popupOverlay) {
+          popupOverlay.classList.add("hidden");
+          popupOverlay.style.display = "none";
+        }
         return;
       }
 
@@ -718,9 +826,21 @@
 
       if (messages.length === 0) {
         box.style.display = "none";
+        if (popupOverlay) {
+          popupOverlay.classList.add("hidden");
+          popupOverlay.style.display = "none";
+        }
       } else {
-        textEl.textContent = messages.join("  |  ");
+        const msg = messages.join("  |  ");
+        textEl.textContent = msg;
         box.style.display = "flex";
+
+        // پاپ‌آپ روی لود صفحه تا وقتی که کاربر "خب" نزده
+        if (!window._hydrationPopupDismissed && popupOverlay && popupText) {
+          popupText.textContent = msg;
+          popupOverlay.classList.remove("hidden");
+          popupOverlay.style.display = "flex";
+        }
       }
     }
 
@@ -974,6 +1094,106 @@
       closeEntryModal(false);
     }
 
+    // --- خروجی اکسل (CSV) ---
+    function exportEntriesToCsv() {
+      if (!entries || entries.length === 0) {
+        alert("داده‌ای برای خروجی وجود ندارد.");
+        return;
+      }
+      const headers = [
+        "user_code",
+        "date",
+        "time",
+        "infusion_volume",
+        "infusion_type",
+        "oral_intake",
+        "nephro_right",
+        "nephro_left",
+        "ileostomy",
+        "colostomy",
+        "vomiting",
+        "notes"
+      ];
+
+      const safe = (v) => {
+        if (v === null || v === undefined) return "";
+        const s = String(v).replace(/"/g, '""');
+        if (s.includes(",") || s.includes("\n")) return `"${s}"`;
+        return s;
+      };
+
+      const sorted = [...entries].sort(
+        (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+      );
+
+      let csv = headers.join(",") + "\n";
+      for (const e of sorted) {
+        const row = headers.map((h) => safe(e[h] ?? ""));
+        csv += row.join(",") + "\n";
+      }
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const todayStr = formatDateInput(new Date());
+      a.href = url;
+      a.download = `fluid-tracker-${currentUserCode || "user"}-${todayStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // --- تحلیل هوشمند (نمونه UI – بدون اتصال واقعی) ---
+    function setupAiBox() {
+      const askBtn = document.getElementById("aiAskBtn");
+      const questionEl = document.getElementById("aiQuestion");
+      const statusEl = document.getElementById("aiStatus");
+      const answerEl = document.getElementById("aiAnswer");
+      if (!askBtn || !questionEl || !statusEl || !answerEl) return;
+
+      askBtn.addEventListener("click", () => {
+        const q = questionEl.value.trim();
+        if (!q) {
+          alert("لطفاً یک سوال وارد کنید.");
+          return;
+        }
+        statusEl.textContent = "Thinking (نمونه)...";
+        // 🔐 در این نسخه‌ی فقط فرانت‌اند، نمی‌توانیم به‌طور امن به API چت‌جی‌پی‌تی وصل شویم.
+        // برای اتصال واقعی باید یک سرور امن (backend) داشته باشید که با OpenAI کار کند
+        // و کلید API در آن‌جا نگهداری شود، نه داخل این فایل HTML.
+        const summaryToday = (() => {
+          const today = new Date();
+          const todayStr = formatDateInput(today);
+          const s = calculateSummaryForDate(todayStr);
+          return { date: todayStr, ...s };
+        })();
+
+        const text =
+`این یک پاسخ نمونه است (بدون اتصال واقعی به هوش مصنوعی).
+
+سوال شما:
+${q}
+
+خلاصه‌ی امروز (تقریبی بر اساس داده‌های فعلی):
+- تاریخ: ${summaryToday.date}
+- مجموع ورودی: ${summaryToday.inputTotal || 0} cc
+- مجموع خروجی: ${summaryToday.outputTotal || 0} cc
+- تراز مایع: ${summaryToday.netBalance || 0} cc
+
+برای این‌که برنامه واقعاً با هوش مصنوعی و چت‌جی‌پی‌تی کار کند، باید:
+1. یک سرور امن (مثلاً Node.js + Express) داشته باشید.
+2. در آن سرور با استفاده از کلید رسمی OpenAI، درخواست را بفرستید.
+3. این وب‌اپ (GitHub Pages) سوال و داده‌ها را به سرور خودتان بفرستد.
+4. پاسخ سرور را اینجا نمایش بدهد.
+
+توجه: هر تحلیل مایعات و داروها حتماً باید توسط پزشک شما تأیید شود.`;
+
+        answerEl.textContent = text;
+        statusEl.textContent = "";
+      });
+    }
+
     // --- init ---
     async function initApp() {
       // اطمینان از بسته بودن مودال‌ها در شروع
@@ -981,8 +1201,14 @@
       entryModal.style.display = "none";
       fieldModalOverlay.classList.add("hidden");
       fieldModalOverlay.style.display = "none";
+      const hydrationPopupOverlay = document.getElementById("hydrationPopupOverlay");
+      if (hydrationPopupOverlay) {
+        hydrationPopupOverlay.classList.add("hidden");
+        hydrationPopupOverlay.style.display = "none";
+      }
       draftEntry = null;
       currentFieldKey = null;
+      window._hydrationPopupDismissed = false;
 
       const today = new Date();
       const todayStr = formatDateInput(today);
@@ -1009,6 +1235,11 @@
       entryModal.style.display = "none";
       fieldModalOverlay.classList.add("hidden");
       fieldModalOverlay.style.display = "none";
+      const hydrationPopupOverlay = document.getElementById("hydrationPopupOverlay");
+      if (hydrationPopupOverlay) {
+        hydrationPopupOverlay.classList.add("hidden");
+        hydrationPopupOverlay.style.display = "none";
+      }
 
       document.getElementById("refreshSummaryBtn").addEventListener("click", async () => {
         entries = await loadEntriesFromServer();
@@ -1021,7 +1252,12 @@
         drawTrendChart().catch(console.error);
       });
 
-      // جدول – کلیک برای ویرایش و Save
+      const exportBtn = document.getElementById("exportExcelBtn");
+      if (exportBtn) {
+        exportBtn.addEventListener("click", exportEntriesToCsv);
+      }
+
+      // جدول – کلیک برای ویرایش و Save/حذف
       const tbody = document.querySelector("#entriesTable tbody");
       tbody.addEventListener("click", (e) => {
         const td = e.target.closest("td");
@@ -1031,11 +1267,32 @@
         if (!id) return;
 
         const field = td.dataset.field;
+        const target = e.target;
 
         if (field === "save") {
-          currentEditingId = null;
-          highlightActiveRow();
-          return;
+          if (target.classList.contains("row-delete-btn")) {
+            const ok = confirm("آیا مطمئن هستید که می‌خواهید این ردیف را حذف کنید؟");
+            if (!ok) return;
+            const idx = entries.findIndex((en) => en.id === id);
+            if (idx !== -1) {
+              entries.splice(idx, 1);
+              renderTable();
+              updateSummaryForSelectedDate();
+              checkHydrationStatus();
+              deleteEntryFromServer(id).catch(console.error);
+            }
+            return;
+          } else if (target.classList.contains("row-save-btn")) {
+            // در حال حاضر تمام ویرایش‌ها بلافاصله ذخیره می‌شوند.
+            // این دکمه فقط برای تمام‌شدن و برداشتن هایلایت است.
+            currentEditingId = null;
+            highlightActiveRow();
+            return;
+          } else {
+            currentEditingId = null;
+            highlightActiveRow();
+            return;
+          }
         }
 
         currentEditingId = id;
@@ -1101,15 +1358,27 @@
         });
       }
 
-      // بستن پیام مایعات
+      // بستن پیام مایعات (بنر بالای خلاصه)
       const closeHydrationBtn = document.getElementById("closeHydrationBtn");
       if (closeHydrationBtn) {
         closeHydrationBtn.addEventListener("click", () => {
-          window._hydrationDismissed = true;
           const box = document.getElementById("hydrationMessage");
           if (box) box.style.display = "none";
         });
       }
+
+      // بستن پاپ‌آپ با دکمه "خب"
+      const hydrationPopupOkBtn = document.getElementById("hydrationPopupOkBtn");
+      if (hydrationPopupOkBtn && hydrationPopupOverlay) {
+        hydrationPopupOkBtn.addEventListener("click", () => {
+          window._hydrationPopupDismissed = true;
+          hydrationPopupOverlay.classList.add("hidden");
+          hydrationPopupOverlay.style.display = "none";
+        });
+      }
+
+      // ست‌آپ باکس AI
+      setupAiBox();
 
       initApp().catch((e) => {
         console.error(e);
