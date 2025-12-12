@@ -463,10 +463,12 @@
         .order("timestamp", { ascending: true });
 
       if (error) {
-  console.error("Supabase error:", error);
-  alert("خطا در خواندن داده از Supabase:\n" + (error.message || JSON.stringify(error)));
-  return [];
-}
+        console.error(error);
+        alert("خطا در خواندن داده از Supabase (اینترنت یا تنظیمات پروژه را چک کنید).");
+        return [];
+      }
+      return data || [];
+    }
 
     async function saveEntryToServer(entry) {
       if (!currentUserCode) {
